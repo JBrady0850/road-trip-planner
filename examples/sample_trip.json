@@ -1,0 +1,40 @@
+{
+  "trip": {
+    "name": "Sample Smokies Weekend",
+    "traveler": "Sample Traveler",
+    "timezone": "America/New_York",
+    "map_url": null,
+    "rules": {
+      "max_drive_hours": 7,
+      "checkin_target": "15:00",
+      "checkin_window_minutes": 60,
+      "ticket_margin_minutes": 30,
+      "arrive_before_sunset": true,
+      "travel_slack_minutes": 10
+    }
+  },
+  "days": [
+    {
+      "date": "2027-10-16",
+      "title": "Knoxville to Cherokee over Newfound Gap",
+      "stops": [
+        {"name": "Home (sample)", "type": "Home", "address": "Knoxville, TN", "lat": 35.9606, "lon": -83.9207, "depart": "08:00"},
+        {"name": "Sugarlands Visitor Center", "type": "Scenic", "address": "1420 Fighting Creek Gap Rd, Gatlinburg, TN 37738", "lat": 35.6853, "lon": -83.5367, "arrive": "09:00", "depart": "09:45"},
+        {"name": "Clingmans Dome", "type": "Scenic", "address": "Clingmans Dome Rd, Bryson City, NC 28713", "lat": 35.5571, "lon": -83.4966, "arrive": "10:45", "depart": "12:00", "notes": "Road closes in winter; sample coordinates are approximate"},
+        {"name": "Oconaluftee Visitor Center", "type": "Scenic", "address": "1194 Newfound Gap Rd, Cherokee, NC 28719", "lat": 35.5130, "lon": -83.3064, "arrive": "13:00", "depart": "14:00"},
+        {"name": "Sample Hotel Cherokee", "type": "Hotel", "address": "Cherokee, NC 28719", "lat": 35.4840, "lon": -83.3145, "arrive": "14:45", "checkin": true}
+      ]
+    },
+    {
+      "date": "2027-10-17",
+      "title": "Cherokee to Cades Cove and home",
+      "stops": [
+        {"name": "Sample Hotel Cherokee", "type": "Hotel", "address": "Cherokee, NC 28719", "lat": 35.4840, "lon": -83.3145, "depart": "08:30"},
+        {"name": "Mingus Mill", "type": "History", "address": "Newfound Gap Rd, Cherokee, NC 28719", "lat": 35.5203, "lon": -83.3101, "arrive": "08:45", "depart": "09:15"},
+        {"name": "Newfound Gap overlook", "type": "Scenic", "address": "Newfound Gap Rd, Gatlinburg, TN 37738", "lat": 35.6110, "lon": -83.4252, "arrive": "09:50", "depart": "10:15"},
+        {"name": "Cades Cove Loop", "type": "Scenic drive", "address": "Cades Cove Loop Rd, Townsend, TN 37882", "lat": 35.6012, "lon": -83.7764, "arrive": "11:50", "depart": "14:00"},
+        {"name": "Home (sample)", "type": "Home", "address": "Knoxville, TN", "lat": 35.9606, "lon": -83.9207, "arrive": "15:30"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4d3a">
+<title>Road Trip Planner</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img src="icon.svg" alt="" width="28" height="28"><span>Road Trip Planner</span></div>
+  <nav id="tabs" role="tablist" aria-label="Sections">
+    <button data-tab="interview" role="tab">Interview</button>
+    <button data-tab="destinations" role="tab">Destinations</button>
+    <button data-tab="trip" role="tab">Trip</button>
+    <button data-tab="navigate" role="tab">Navigate</button>
+    <button data-tab="weather" role="tab">Weather &amp; Roads</button>
+    <button data-tab="budget" role="tab">Budget &amp; Booking</button>
+    <button data-tab="tracker" role="tab">50 States</button>
+    <button data-tab="settings" role="tab">Settings</button>
+  </nav>
+</header>
+<main id="view" tabindex="-1"></main>
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p class="pad">This app needs JavaScript turned on.</p></noscript>
+<script src="data/catalog.js"></script>
+<script src="data/states.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/services.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

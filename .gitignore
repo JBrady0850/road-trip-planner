@@ -1,0 +1,17 @@
+# credentials and personal data never belong in this repository
+.auth/
+*.env
+.env*
+*secret*
+*token*
+*credential*
+gmail_config*.json
+# generated output
+output/
+.cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+# personal trip files (keep examples/ only)
+my-trips/
+*-backup.json

@@ -1,0 +1,7 @@
+# Command-line engine and tests only. The app itself needs nothing installed.
+requests>=2.31
+pytest>=8
+# optional: native desktop window
+# pywebview>=5
+# optional: browser smoke test
+# playwright>=1.45

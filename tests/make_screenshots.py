@@ -1,0 +1,127 @@
+"""Regenerate README screenshots with sample data: python tests/make_screenshots.py
+
+Live services are replaced with realistic offline stand-ins so the images are
+repeatable: routing uses road-distance estimates, weather shows sample forecasts.
+"""
+import json
+import math
+from pathlib import Path
+
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parents[1]
+APP = (ROOT / "app" / "index.html").as_uri()
+OUT = ROOT / "docs" / "images"
+OUT.mkdir(parents=True, exist_ok=True)
+HOME = [{"display_name": "Knoxville, Knox County, Tennessee, United States", "lat": "35.9606", "lon": "-83.9207", "address": {"state": "Tennessee"}}]
+
+
+def osrm(route):
+    pts = [tuple(map(float, c.split(","))) for c in route.request.url.split("/driving/")[1].split("?")[0].split(";")]
+    legs = []
+    for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+        d = 6371000 * 2 * math.asin(math.sqrt(math.sin(math.radians(y2 - y1) / 2) ** 2 + math.cos(math.radians(y1)) * math.cos(math.radians(y2)) * math.sin(math.radians(x2 - x1) / 2) ** 2)) * 1.3
+        legs.append({"distance": d, "duration": d / 22.0})  # about 49 mph
+    route.fulfill(json={"code": "Ok", "routes": [{"legs": legs, "geometry": {"coordinates": [list(p) for p in pts]}}]}, headers={"Access-Control-Allow-Origin": "*"})
+
+
+TRIP_DATES = []
+
+
+def nws(route):
+    u = route.request.url
+    if "/points/" in u:
+        body = {"properties": {"forecast": "https://api.weather.gov/gridpoints/GSP/1,1/forecast", "timeZone": "America/New_York"}}
+    elif "/forecast" in u:
+        body = {"properties": {"periods": [p for d in TRIP_DATES for p in (
+            {"name": "Today", "startTime": f"{d}T06:00:00-04:00", "temperature": 64, "temperatureUnit": "F", "shortForecast": "Mostly Sunny"},
+            {"name": "Tonight", "startTime": f"{d}T18:00:00-04:00", "temperature": 41, "temperatureUnit": "F", "shortForecast": "Clear"})]}}
+    else:
+        body = {"features": []}
+    route.fulfill(json=body, headers={"Access-Control-Allow-Origin": "*"})
+
+
+def main():
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        for scheme in ("light",):
+            ctx = b.new_context(viewport={"width": 1280, "height": 820}, device_scale_factor=1, color_scheme=scheme)
+            page = ctx.new_page()
+            page.on("dialog", lambda d: d.accept())
+            page.route("https://nominatim.openstreetmap.org/**", lambda r: r.fulfill(json=HOME, headers={"Access-Control-Allow-Origin": "*"}))
+            page.route("https://router.project-osrm.org/**", osrm)
+            page.route("https://api.weather.gov/**", nws)
+            page.goto(APP)
+            page.evaluate("localStorage.clear()")
+            page.reload()
+            page.add_style_tag(content="#toast{display:none!important}")
+            shot = lambda name: page.screenshot(path=str(OUT / f"{name}.png"))
+
+            page.fill("[data-bind='profile.traveler']", "Sam")
+            page.dispatch_event("[data-bind='profile.traveler']", "change")
+            page.fill("#homeQ", "Knoxville, TN")
+            page.click("[data-act=homeSearch]")
+            page.click("#homeResults [data-pick='0']")
+            page.wait_for_selector("text=Home set:")
+            page.click("[data-act=stepNext]")
+            page.fill("[data-bind=startDate]", "2027-10-14")
+            page.dispatch_event("[data-bind=startDate]", "change")
+            page.click("[data-act=stepNext]")
+            for k in ("waterfalls", "hiking", "parks", "food"):
+                page.click(f"[data-act=interest][data-k={k}]")
+            shot("01-interview")
+            for _ in range(3):
+                page.click("[data-act=stepNext]")
+            for s in ("FL", "GA", "AL"):
+                page.click(f"[data-act=toggleState][data-s={s}]")
+            page.click("[data-act=stepNext]")
+            page.click("[data-act=findDest]")
+            page.wait_for_selector("text=Recommended destinations")
+            shot("02-destinations")
+
+            page.click("[data-act=build][data-i='1']")
+            page.wait_for_selector("[data-act=routeAll]")
+            page.click("[data-act=routeAll]")
+            page.wait_for_selector("text=routed", timeout=15000)
+            page.click("[data-act=retime]")
+            TRIP_DATES.extend(page.evaluate("RT.state.trip.days.map(d => d.date)"))
+            # a deliberate late check-in shows the checker at work
+            page.evaluate("RT.state.trip.days[0].stops[RT.state.trip.days[0].stops.length-1].arrive = '17:45'")
+            page.click("[data-act=check]")
+            shot("03-trip-check")
+
+            page.click("#tabs [data-tab=navigate]")
+            shot("04-navigate")
+            page.click("#tabs [data-tab=weather]")
+            page.click("[data-act=weather]")
+            page.wait_for_selector("text=No active alerts")
+            shot("05-weather-roads")
+            page.click("#tabs [data-tab=budget]")
+            shot("06-budget-booking")
+            page.click("#tabs [data-tab=tracker]")
+            shot("07-tracker")
+            ctx.close()
+
+        # tablet, portrait
+        ctx = b.new_context(viewport={"width": 820, "height": 1180}, device_scale_factor=1, has_touch=True)
+        page = ctx.new_page()
+        page.route("https://nominatim.openstreetmap.org/**", lambda r: r.fulfill(json=HOME, headers={"Access-Control-Allow-Origin": "*"}))
+        page.goto(APP)
+        page.evaluate("localStorage.clear()")
+        page.reload()
+        page.fill("#homeQ", "Knoxville, TN")
+        page.click("[data-act=homeSearch]")
+        page.click("#homeResults [data-pick='0']")
+        page.wait_for_selector("text=Home set:")
+        page.evaluate("RT.state.profile.interests = ['scenic','beach','fishing','history']; RT.state.startDate='2027-04-15'; RT.state.recs=[]")
+        page.click("#tabs [data-tab=destinations]")
+        page.wait_for_selector("text=Recommended destinations")
+        page.add_style_tag(content="#toast{display:none!important}")
+        page.screenshot(path=str(OUT / "08-tablet.png"))
+        ctx.close()
+        b.close()
+    print("\n".join(sorted(str(f.relative_to(ROOT)) for f in OUT.glob("*.png"))))
+
+
+if __name__ == "__main__":
+    main()
