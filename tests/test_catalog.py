@@ -76,3 +76,37 @@ def test_every_destination_has_unique_experiences():
         assert found, f"{d['id']} has no experiences"
         items = json.loads(f"[{found.group(1)}]")
         assert 1 <= len(items) <= 3 and all(len(x) > 15 for x in items), (d["id"], items)
+
+
+ENGINE = CATALOG.parents[1] / "js" / "engine.js"
+
+
+def interest_keys():
+    text = ENGINE.read_text(encoding="utf-8")
+    block = text[text.index("RT.INTEREST_GROUPS = ["):]
+    block = block[:block.index("];")]
+    return re.findall(r'\["([a-z]+)", "[^"]+"\]', block)
+
+
+def test_every_tag_is_an_interest_the_app_offers():
+    keys = set(interest_keys())
+    assert len(keys) == 24, sorted(keys)
+    for d in destinations():
+        unknown = (set(d["tags"]) | {t for _, tags in d["stops"] for t in tags}) - keys
+        assert not unknown, f"{d['id']}: tags with no chip: {unknown}"
+
+
+def test_every_interest_has_places_in_at_least_five_trips():
+    for k in interest_keys():
+        trips = [d["id"] for d in destinations() if any(k in tags for _, tags in d["stops"])]
+        assert len(trips) >= 5, f"{k}: only {len(trips)} trips have a {k} place: {trips}"
+
+
+NEW_INTERESTS = {"wildlife", "gardens", "camping", "golf", "music", "drinks", "art", "themeparks", "family", "spa", "markets"}
+
+
+def test_new_interest_places_mark_their_trip():
+    for d in destinations():
+        for k in NEW_INTERESTS:
+            if any(k in tags for _, tags in d["stops"]):
+                assert k in d["tags"], f"{d['id']} has a {k} place but no {k} tag"

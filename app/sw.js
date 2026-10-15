@@ -2,7 +2,7 @@
    connected device always gets the newest version; the cached copy is used only
    when offline. Live services (routing, weather, place search, AI) still need a
    connection and are never cached. Bump VERSION when the file list changes. */
-const VERSION = "rtp-v0.4.2";
+const VERSION = "rtp-v0.5.0";
 const FILES = ["./", "index.html", "css/style.css", "js/engine.js", "js/services.js", "js/app.js",
   "data/catalog.js", "data/states.js", "manifest.webmanifest", "icon.svg", "icon-180.png",
   "icon-192.png", "icon-512.png", "icon-maskable-512.png", "qr-app.png"];

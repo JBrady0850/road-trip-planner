@@ -1,14 +1,15 @@
 # Road Trip Planner
 
 A free, self-contained road trip planner for one traveler or a small group. You
-answer three questions (where you start, when, what you enjoy), it ranks
-destinations that fit your interests, the season, and the drive from home, builds
+answer three questions (where you start, when and where, what you enjoy), it ranks
+destinations that fit your interests, the season, and the drive from home (or puts
+the town you already chose first), builds
 and checks a day-by-day itinerary in one tap, and gives you phone navigation links,
 a calendar file, map layers, live weather and road links, a budget, a booking
 checklist, and a 50-state tracker. Every setting starts with a sensible value, so
 you change only what is different for you. Coastal trips include lighthouses in every
-ocean, Gulf, and Great Lakes state, and every destination lists the experiences you
-can only have there.
+ocean, Gulf, and Great Lakes state, every destination lists the experiences you can
+only have there, and anglers get a link to buy each state's fishing license online.
 
 It runs on a computer or a tablet. Your data stays on your device.
 
@@ -77,11 +78,11 @@ Screenshots use a sample traveler from Knoxville, TN; weather shown is sample da
 
 | | |
 |---|---|
-| **1. Three questions.** Where you start (type it or tap Use my location), when, and what you enjoy. Pace and comfort presets fill in everything else. ![Interview](docs/images/01-interview.png) | **2. Ranked trips.** Best match first, with plain-word fit, the reasons, and each city's places ordered by your interests. Pick a state to rank only its cities. ![Destinations](docs/images/02-destinations.png) |
+| **1. Three questions.** Where you start (type it or tap Use my location), when and where (a state, plus a city if you know it), and what you enjoy, in four groups. Pace and comfort presets fill in everything else. ![Interview](docs/images/01-interview.png) | **2. Ranked trips.** Best match first, with plain-word fit, the reasons, and each city's places ordered by your interests. Pick a state to rank only its cities. ![Destinations](docs/images/02-destinations.png) |
 | **3. Trip, built and checked in one tap.** Stops are one line each; tap Edit to change one. Free days offer nearby day trips. ![Trip and plan check](docs/images/03-trip-check.png) | **4. Navigate.** Google Maps routes per day, Waze links per stop, calendar, CSV, and KML downloads. ![Navigate](docs/images/04-navigate.png) |
 | **5. Weather and roads.** National Weather Service forecasts and alerts, plus official state road-condition pages. ![Weather and roads](docs/images/05-weather-roads.png) | **6. Budget and booking.** Estimate against your cap and a checklist with booking links. ![Budget and booking](docs/images/06-budget-booking.png) |
 | **7. 50-state tracker.** Tap states visited; the current trip is outlined. ![50-state tracker](docs/images/07-tracker.png) | **8. Tablet.** The same app on an iPad or Android tablet, added to the home screen. ![Tablet](docs/images/08-tablet.png) |
-| **9. Give feedback.** Testers answer a few questions; one tap fills in the GitHub form, or saves the answers as a file. ![Feedback](docs/images/10-feedback.png) | |
+| **9. Give feedback.** Testers answer a few questions; one tap fills in the GitHub form, or saves the answers as a file. ![Feedback](docs/images/10-feedback.png) | **10. Know the town?** Type it in City; that trip comes first, and the rest of the state follows, ranked. ![City first](docs/images/11-city.png) |
 
 ## Run it from a download (optional)
 
@@ -108,13 +109,29 @@ works: upload the `app` folder as is.
 ## What it does
 
 1. **Three questions:** where you start (type a town, or tap **Use my location**),
-   when and for how many nights, and what you enjoy (scenic drives, parks,
-   waterfalls, beaches, lighthouses, fishing, water sports, history, food, holiday
-   lights, easy hikes, caves, towns). Three interests are picked for you; change them freely.
-   Optional: choose a destination state, and **Adjust the details** for a pace
+   when, where, and for how many nights, and what you enjoy. **Where to** takes a
+   state, and a **City** when you already know the town: a catalog town (with
+   suggestions as you type) goes straight to the top, and any other town is looked
+   up on the map and built from the catalog places within about an hour's drive.
+   Leave City blank to see the best cities for your interests. Interests come in four
+   groups, 24 in all:
+   - **Outdoors and nature:** scenic drives, overlooks, and photo spots; national and
+     state parks; hiking and nature trails; waterfalls; caves; wildlife viewing and
+     birding; botanical gardens and nature centers; camping and RV parks; golf and
+     disc golf.
+   - **Coast and water:** beaches; lighthouses; kayak, boat, and water sports;
+     fishing at lakes, rivers, streams, and piers.
+   - **Culture and entertainment:** history, museums, and historic sites; small
+     towns and shopping; food and local dining; live music and performing arts;
+     breweries, wineries, and distilleries; art galleries and craft markets; theme
+     parks and attractions.
+   - **Family and relaxation:** family-friendly attractions; spas, hot springs, and
+     wellness; farmers markets and orchards; festivals, fairs, and holiday lights.
+
+   Three interests are picked for you; change them freely. Optional: **Adjust the details** for a pace
    preset (Relaxed, Balanced, Cover ground), a comfort preset (Economy, Mid-range,
    Comfort), and every individual setting underneath, all pre-filled.
-2. **Ranked trips:** a built-in catalog of 54 destinations covering all 50 states is
+2. **Ranked trips:** a built-in catalog of 54 destinations and 444 places covering all 50 states is
    ranked for your interests, the season, new states, and the drive from home. Each
    card says why in plain words (Great fit, Good fit, Far for this trip), lists the
    city's places with your best matches first, and shows what you can only do there
@@ -122,6 +139,9 @@ works: upload the `app` folder as is.
    best fit down. Pick **Lighthouses** to bring coastal trips to the top: every
    ocean, Gulf, and Great Lakes state has at least one lighthouse you can visit or
    see from shore (Alaska is the exception; see [docs/LIMITS.md](docs/LIMITS.md)).
+   Pick **Fishing** and every fishing trip shows a link to the state's official page
+   for buying a fishing license online, on the trip card, the itinerary, the booking
+   checklist, and the saved itinerary.
 3. **One-tap itinerary:** tap a trip and the app drafts it, checks it, and fetches
    real drive times. Drive days fit your daily limit; sightseeing days are packed to
    your pace; the day you arrive sees sights on the way in so check-in lands on time;
@@ -140,8 +160,8 @@ works: upload the `app` folder as is.
    for every stop, official FHWA road-condition pages for each state on the trip, and
    National Park Service alerts.
 8. **Budget and booking:** lodging, fuel, food, attractions, and contingency against
-   your cap, plus a booking checklist with lodging search links. You book; the app
-   never reserves or pays.
+   your cap, plus a booking checklist with lodging search links (and fishing license
+   links when you fish). You book; the app never reserves or pays.
 9. **50 states:** tap to mark states visited; finished trips mark their states.
 10. **Optional AI itineraries:** add your own Anthropic API key in Settings to have
     Claude write a custom itinerary, which then goes through the same checks.
@@ -168,7 +188,7 @@ address and booking numbers. To send code or catalog changes, see
 ```
 app/                 the app (open index.html)
   data/catalog.js    destinations: edit or add your own
-  data/states.js     50 states and road-condition links
+  data/states.js     50 states, road-condition links, fishing license pages
   js/engine.js       scoring, drafting, checker, links, exports (no network)
   js/services.js     place search, routing, weather, optional AI
   js/app.js          interface

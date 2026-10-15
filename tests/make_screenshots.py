@@ -67,7 +67,8 @@ def main():
                 page.click(f"[data-act=interest][data-k={k}]")
             page.click("[data-act=interest][data-k=food]")
             page.evaluate("RT.state.profile.visited = ['FL', 'GA', 'AL']")
-            shot("01-interview")
+            page.evaluate("window.scrollTo(0, 0)")
+            page.screenshot(path=str(OUT / "01-interview.png"), full_page=True)
             page.click("[data-act=findDest]")
             page.wait_for_selector("text=Recommended trips")
             shot("02-destinations")
@@ -99,6 +100,15 @@ def main():
             page.click("[data-fb-ease='4']")
             page.fill("[data-fb=ideas]", "More lighthouses on the Great Lakes")
             shot("10-feedback")
+            # Where to: a traveler who knows the town gets that trip first
+            page.click("#tabs [data-tab=interview]")
+            page.select_option("[data-bind='profile.destState']", "TN")
+            page.fill("[data-bind='profile.destCity']", "Gatlinburg")
+            page.dispatch_event("[data-bind='profile.destCity']", "change")
+            page.click(".stepbar [data-act=findDest]")
+            page.wait_for_selector(".card.dest.pick")
+            page.evaluate("window.scrollTo(0, document.querySelector('.where').getBoundingClientRect().top + window.scrollY - 140)")
+            shot("11-city")
             ctx.close()
 
         # tablet, portrait

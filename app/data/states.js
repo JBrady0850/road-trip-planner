@@ -1,6 +1,60 @@
 /* 50 states. Road-condition links use the official FHWA state traffic-info pages
    (https://highways.dot.gov/traffic-info), which link to each state's own 511 or
-   DOT traveler site. "dot" overrides with a verified direct state site. */
+   DOT traveler site. "dot" overrides with a verified direct state site.
+   "fish" is the state wildlife agency's page for buying a fishing license online,
+   each opened and checked on 2026-10-15 (docs/catalog-check.md). */
+const RT_FISH = {
+  AL: "https://myoutdooralabama.com/",
+  AK: "https://www.adfg.alaska.gov/store/",
+  AZ: "https://license.azgfd.com/",
+  AR: "https://www.agfc.com/licenses",
+  CA: "https://wildlife.ca.gov/Licensing/Online-Sales",
+  CO: "https://cpw.state.co.us/buy-apply",
+  CT: "https://portal.ct.gov/DEEP/Fishing/General-Information/Fisheries-Licenses-and-Permits",
+  DE: "https://dnrec.delaware.gov/fish-wildlife/licenses/",
+  FL: "https://gooutdoorsflorida.com/",
+  GA: "https://gooutdoorsgeorgia.com/",
+  HI: "https://dlnr.hawaii.gov/dar/licenses-and-permits/freshwater-game-fishing-license/",
+  ID: "https://idfg.idaho.gov/buy-online",
+  IL: "https://www.exploremoreil.com/",
+  IN: "https://www.in.gov/dnr/fish-and-wildlife/licenses-and-permits/",
+  IA: "https://gooutdoorsiowa.com/",
+  KS: "https://www.gooutdoorskansas.gov/",
+  KY: "https://fw.ky.gov/Licenses/Pages/default.aspx",
+  LA: "https://www.wlf.louisiana.gov/page/recreational-fishing-licenses-and-permits",
+  ME: "https://apps1.web.maine.gov/cgi-bin/online/moses_v3/index",
+  MD: "https://dnr.maryland.gov/Pages/service_fishing_license.aspx",
+  MA: "https://www.mass.gov/how-to/buy-your-freshwater-fishing-license",
+  MI: "https://www.mdnr-elicense.com/",
+  MN: "https://www.dnr.state.mn.us/licenses/online-sales.html",
+  MS: "https://www.mdwfp.com/licenses-permits",
+  MO: "https://mdc-web.s3licensing.com/",
+  MT: "https://ols.fwp.mt.gov/",
+  NE: "https://outdoornebraska.gov/permits/",
+  NV: "https://www.ndow.org/apply-buy/fishing/",
+  NH: "https://www.nhfishandgame.com/",
+  NJ: "https://dep.nj.gov/njfw/licenses-and-permits/fishing-and-hunting-license-and-permit-information/",
+  NM: "https://wildlife.dgf.nm.gov/fishing/licenses-permits/",
+  NY: "https://dec.ny.gov/regulatory/permits-licenses/sporting-and-use/sporting/decals",
+  NC: "https://www.gooutdoorsnorthcarolina.com/",
+  ND: "https://gf.nd.gov/buy-apply",
+  OH: "https://ohiodnr.gov/buy-and-apply/hunting-fishing-boating/fishing-resources/fishing-licenses",
+  OK: "https://gooutdoorsoklahoma.com/",
+  OR: "https://myodfw.com/articles/how-buy-license-or-tag",
+  PA: "https://www.huntfish.pa.gov/",
+  RI: "https://rio.ri.gov/",
+  SC: "https://gooutdoorssouthcarolina.com/",
+  SD: "https://gfp.sd.gov/hunt-fish-license/",
+  TN: "https://gooutdoorstennessee.com/",
+  TX: "https://tpwd.texas.gov/business/licenses/online_sales/",
+  UT: "https://wildlife.utah.gov/licenses.html",
+  VT: "https://www.vtfwdsales.com/online/cid_entry.php",
+  VA: "https://gooutdoorsvirginia.com/",
+  WA: "https://wdfw.wa.gov/licenses/fishing",
+  WV: "https://wvdnr.gov/buy-a-license/",
+  WI: "https://dnr.wisconsin.gov/topic/Fishing/outreach/FishingLicenses",
+  WY: "https://wgfd.wyo.gov/licenses-applications"
+};
 window.RT_STATES = [
   ["AL","Alabama","alabama","https://algotraffic.com/"],["AK","Alaska","alaska"],["AZ","Arizona","arizona"],
   ["AR","Arkansas","arkansas"],["CA","California","california"],["CO","Colorado","colorado"],
@@ -20,6 +74,6 @@ window.RT_STATES = [
   ["WI","Wisconsin","wisconsin"],["WY","Wyoming","wyoming"]
 ].map(([abbr, name, slug, dot]) => ({abbr, name, slug,
   roads: dot || `https://highways.dot.gov/traffic-info/${slug}`,
-  fhwa: `https://highways.dot.gov/traffic-info/${slug}`}));
+  fhwa: `https://highways.dot.gov/traffic-info/${slug}`, fish: RT_FISH[abbr]}));
 window.RT_STATE_BY_NAME = Object.fromEntries(window.RT_STATES.map(s => [s.name.toLowerCase(), s]));
 window.RT_STATE_BY_ABBR = Object.fromEntries(window.RT_STATES.map(s => [s.abbr, s]));

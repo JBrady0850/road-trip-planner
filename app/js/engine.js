@@ -23,7 +23,7 @@
     rules: { maxDriveHours: 7, budgetCap: 1500, walkMiles: 5, nightsMin: 3, nightsMax: 7, checkinTarget: "15:00", checkinWindow: 60, ticketMargin: 30, arriveBeforeSunset: true, startTime: "08:30", stopsPerDay: 3, pace: "balanced" },
     lodging: { brand: "Any", nightlyLow: 120, nightlyHigh: 180, freeBreakfast: true, comfort: "mid" },
     dining: { diet: "No restriction", upscaleDinners: 1, lunchCap: 30, foodPerDay: 55 },
-    interests: ["scenic", "parks", "food"], months: [], flyOk: false, visited: [], destState: "", aiKey: "", aiModel: "claude-sonnet-5-5"
+    interests: ["scenic", "parks", "food"], months: [], flyOk: false, visited: [], destState: "", destCity: "", destPlace: null, aiKey: "", aiModel: "claude-sonnet-5-5"
   });
 
   // ---------- presets ----------
@@ -44,8 +44,19 @@
   RT.suggestCap = (profile, nights) => { const L = profile.lodging, D = profile.dining, n = Math.max(1, nights || 4); const est = n * L.nightlyHigh + (n + 1) * (D.foodPerDay + 25) + 180; return Math.ceil(est * 1.1 / 50) * 50; };
   RT.applyComfort = (profile, key, nights) => { const c = RT.COMFORT[key]; if (!c) return false; const L = profile.lodging, D = profile.dining; L.comfort = key; L.nightlyLow = c.nightlyLow; L.nightlyHigh = c.nightlyHigh; D.foodPerDay = c.foodPerDay; D.lunchCap = c.lunchCap; D.upscaleDinners = c.upscaleDinners; profile.rules.budgetCap = RT.suggestCap(profile, nights); return true; };
 
+  // ---------- interests ----------
+  // Each key is a tag on catalog places (docs/CATALOG.md). Keys never change once
+  // published, so saved profiles keep their picks; labels may widen.
+  RT.INTEREST_GROUPS = [
+    ["Outdoors and nature", [["scenic", "Scenic drives, overlooks, and photo spots"], ["parks", "National and state parks"], ["hiking", "Hiking and nature trails"], ["waterfalls", "Waterfalls"], ["caves", "Caves"], ["wildlife", "Wildlife viewing and birding"], ["gardens", "Botanical gardens and nature centers"], ["camping", "Camping and RV parks"], ["golf", "Golf and disc golf"]]],
+    ["Coast and water", [["beach", "Beaches"], ["lighthouses", "Lighthouses"], ["water", "Kayak, boat, and water sports"], ["fishing", "Fishing: lakes, rivers, streams, and piers"]]],
+    ["Culture and entertainment", [["history", "History, museums, and historic sites"], ["town", "Small towns and shopping"], ["food", "Food and local dining"], ["music", "Live music and performing arts"], ["drinks", "Breweries, wineries, and distilleries"], ["art", "Art galleries and craft markets"], ["themeparks", "Theme parks and attractions"]]],
+    ["Family and relaxation", [["family", "Family-friendly attractions"], ["spa", "Spas, hot springs, and wellness"], ["markets", "Farmers markets and orchards"], ["lights", "Festivals, fairs, and holiday lights"]]]
+  ];
+  RT.INTERESTS = RT.INTEREST_GROUPS.flatMap(g => g[1]);
+
   // ---------- destination scoring ----------
-  const INTEREST_NAMES = { scenic: "scenic drives", parks: "parks", waterfalls: "waterfalls", beach: "beaches", fishing: "fishing", water: "water sports", history: "history", food: "food", lights: "lights and festivals", hiking: "easy hikes", caves: "caves", town: "small towns", lighthouses: "lighthouses" };
+  const INTEREST_NAMES = { scenic: "scenic drives and views", parks: "parks", waterfalls: "waterfalls", beach: "beaches", fishing: "fishing", water: "water sports", history: "history and historic sites", food: "food", lights: "festivals and holiday lights", hiking: "hiking and nature trails", caves: "caves", town: "small towns", lighthouses: "lighthouses", wildlife: "wildlife and birding", gardens: "gardens and nature centers", camping: "camping and RV parks", golf: "golf and disc golf", music: "live music and shows", drinks: "breweries, wineries, and distilleries", art: "art and crafts", themeparks: "theme parks and attractions", family: "family attractions", spa: "spas and hot springs", markets: "farmers markets and orchards" };
   RT.interestName = k => INTEREST_NAMES[k] || k;
   const hoursText = h => h < 0.75 ? "under an hour" : h < 1.5 ? "about 1 hour" : `about ${Math.round(h)} hours`;
   /* Rank catalog destinations for a profile. `nights` is the trip being planned
@@ -66,6 +77,10 @@
       const stopHits = stopsRanked.reduce((n, s) => n + s.hits, 0);
       score += Math.min(stopHits, 8) * 2;
       if (hit.length) reasons.push(`good for ${hit.map(RT.interestName).join(", ")}`);
+      // A trip with nothing the traveler picked should not outrank one that has it,
+      // however close or new it is.
+      const none = !hit.length && !stopHits;
+      if (none) score -= 25;
       if (month) {
         if (d.months.includes(month)) { score += 15; reasons.push("in season"); }
         else { score -= 30; off = true; reasons.push("usually out of season that month"); }
@@ -83,12 +98,66 @@
         if (days > Math.max(1, Math.floor(span / 2))) { score -= 40; far = true; reasons.unshift(`${hoursText(driveH)} from home, too far for ${span} nights`); }
         else { score += Math.max(0, 20 - driveH * 1.5); reasons.push(`${hoursText(driveH)} from home`); }
       }
+      if (none) reasons.push("none of your interests here");
       score = Math.round(score);
       const label = flight && !profile.flyOk ? "Needs a flight" : far ? "Far for this trip" : off ? "Out of season" : score >= 50 ? "Great fit" : score >= 30 ? "Good fit" : "Possible";
       return { dest: d, city: d.base[0], score, driveH, reasons, label, stopsRanked };
     }).sort((a, b) => b.score - a.score);
     out.forEach((r, i) => r.rank = i + 1);
     return out;
+  };
+
+  // ---------- a town the traveler names ----------
+  const cityKey = s => String(s || "").toLowerCase().replace(/\./g, "").replace(/\s+/g, " ").trim().replace(/\bsaint\b/g, "st").replace(/\bmount\b/g, "mt");
+  /* Split typed text into a town and a two-letter state: "Gatlinburg", "Gatlinburg, TN",
+     "Gatlinburg TN", or "Gatlinburg, Tennessee". The state part is "" when absent. */
+  const stateAbbr = s => { const k = cityKey(s); if (!k) return ""; const by = window.RT_STATE_BY_NAME || {}, ab = window.RT_STATE_BY_ABBR || {};
+    return by[k] ? cityKey(by[k].abbr) : ab[k.toUpperCase()] ? k : null; };
+  RT.splitTown = text => {
+    const raw = String(text || "").trim();
+    if (raw.includes(",")) { const i = raw.lastIndexOf(","); const s = stateAbbr(raw.slice(i + 1)); return [cityKey(raw.slice(0, i)), s || ""]; }
+    const w = cityKey(raw).split(" ");
+    for (const n of [2, 1]) { if (w.length > n) { const s = stateAbbr(w.slice(-n).join(" ")); if (s) return [w.slice(0, -n).join(" "), s]; } }
+    return [cityKey(raw), ""];
+  };
+  /* The catalog trip based in the typed town, or null. With a state picked, a trip that
+     includes that state wins a tie. */
+  RT.matchCatalogCity = (text, catalog, state) => {
+    const [c, s] = RT.splitTown(text);
+    if (!c) return null;
+    const hits = catalog.filter(d => { const [bc, bs] = d.base[0].split(",").map(cityKey); return bc === c && (!s || bs === s); });
+    return hits.find(d => !state || d.states.includes(state)) || hits[0] || null;
+  };
+  /* A trip based in any town: every catalog place within about an hour's drive (the
+     estimate, so mountain roads can take longer). `place` is {label, lat, lon, abbr}.
+     States come from the places' addresses; seasons and "Only here" ideas come from
+     the catalog trips those places belong to. */
+  RT.CITY_REACH_H = 1;
+  RT.cityDestination = (place, catalog) => {
+    const at = [place.lat, place.lon], seen = new Set(), stops = [], from = new Map();
+    catalog.filter(d => !d.fly).forEach(d => d.stops.forEach(s => {
+      if (seen.has(s[0]) || estDriveHours(at, [s[2], s[3]]) > RT.CITY_REACH_H) return;
+      seen.add(s[0]); stops.push(s); from.set(d.id, d);
+    }));
+    const src = [...from.values()], abbr = /^[A-Z]{2}$/.test(place.abbr || "") ? place.abbr : "";
+    const months = [...new Set(src.flatMap(d => d.months))].sort((a, b) => a - b);
+    return {
+      id: "city:" + cityKey(place.label).replace(/[^a-z0-9]+/g, "-"), name: place.label, city: true,
+      states: [...new Set([abbr, ...stops.map(s => (String(s[1]).match(/,\s*([A-Z]{2})$/) || [])[1])].filter(Boolean))],
+      base: [place.label, place.lat, place.lon], months: months.length ? months : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      tags: [...new Set(stops.flatMap(s => s[5]))], stops, nearIds: src.map(d => d.id),
+      experiences: src.flatMap(d => d.experiences || []).slice(0, 3)
+    };
+  };
+  /* Rank with the traveler's own pick (a catalog trip or a town) first, marked
+     `pick`, and every other trip ranked after it from #1. */
+  RT.rankWithPick = (profile, catalog, month, nights, state, pick) => {
+    const rest = RT.scoreDestinations(profile, pick ? catalog.filter(d => d.id !== pick.id) : catalog, month, nights, state);
+    if (!pick) return rest;
+    const p = RT.scoreDestinations(profile, [pick], month, nights, "")[0];
+    p.pick = true; p.rank = 0;
+    if (pick.city) p.reasons.unshift(pick.stops.length ? `${pick.stops.length} catalog places within about an hour's drive` : "no catalog places within an hour yet: add your own stops on the Itinerary page");
+    return [p, ...rest];
   };
 
   // ---------- itinerary drafting ----------
@@ -125,7 +194,8 @@
      nearest first, with their own interest score. */
   RT.nearbyDestinations = (trip, catalog, profile) => {
     const b = trip.base; if (!b) return [];
-    return catalog.filter(d => d.id !== trip.destId && !d.fly).map(d => {
+    const own = new Set([trip.destId, ...(trip.nearIds || [])]);
+    return catalog.filter(d => !own.has(d.id) && !d.fly).map(d => {
       const h = estDriveHours([b.lat, b.lon], [d.base[1], d.base[2]]);
       const hits = d.stops.reduce((n, s) => n + s[5].filter(t => profile.interests.includes(t)).length, 0);
       return { dest: d, hours: h, hits };
@@ -151,6 +221,7 @@
     const fill = (from, t, endMin, maxStops) => fillDay(profile, pool, base, from, t, endMin, maxStops, dest.states[0]);
     const checkinMin = toMin(r.checkinTarget);
     const trip = { name: `${dest.name} Road Trip`, destId: dest.id, states: dest.states.slice(), fly: !!dest.fly, base, days, createdBy: "catalog" };
+    if (dest.nearIds) trip.nearIds = dest.nearIds.slice();
     // outbound
     if (!dest.fly) {
       const legH = driveH / travelDays;
@@ -203,7 +274,8 @@
   RT.fillFreeDays = (trip, profile, near) => {
     if (!near || !trip.base) return 0;
     const d2 = near.dest, r = profile.rules, base = trip.base, perDay = r.stopsPerDay || 3;
-    const pool = orderForProfile(profile, [base.lat, base.lon], d2.stops);
+    const have = new Set(trip.days.flatMap(d => d.stops.map(s => s.name)));
+    const pool = orderForProfile(profile, [base.lat, base.lon], d2.stops.filter(s => !have.has(s[0])));
     let n = 0;
     trip.days.filter(RT.isFreeDay).forEach(day => {
       if (!pool.length) return;

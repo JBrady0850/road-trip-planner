@@ -2,7 +2,7 @@
 
 `app/data/catalog.js` holds 54 starter destinations covering all 50 states. Each
 destination has a base town (where you would stay), the months it is usually best,
-interest tags, one to three unique experiences, and 4 to 10 stops (338 in all) with
+interest tags, one to three unique experiences, and 5 to 13 stops (444 in all) with
 coordinates and suggested time on site. The
 app uses the stops to pack each day to your pace and ranks them by your interests,
 so more stops per destination means better drafts.
@@ -18,6 +18,18 @@ Every ocean, Gulf, and Great Lakes state has at least one lighthouse stop (tag
 `lighthouses`); Alaska is the exception, with none reachable by road near the Seward
 trip. The tests check this, so a new coastal trip should keep it true.
 
+Every interest has places in at least five trips (the tests check this too), so every
+chip changes the ranking. A few tags follow a rule:
+
+- `camping`: an outdoor stop with a named campground or RV park in OpenStreetMap
+  within 3 km.
+- `fishing`: lakes, rivers, streams, and piers where fishing is a common activity.
+  Picking Fishing shows each state's official license page (`data/states.js`).
+- `golf`: golf courses, plus the nearest named public disc golf course in
+  OpenStreetMap, within 25 km of the base town.
+- A tag from the newer interests (wildlife, gardens, camping, golf, music, drinks,
+  art, themeparks, family, spa, markets) on any stop also goes on its destination.
+
 ## Add a destination
 
 ```js
@@ -28,8 +40,10 @@ trip. The tests check this, so a new coastal trip should keep it true.
 ]}
 ```
 
-Tags: scenic, parks, waterfalls, beach, lighthouses, fishing, water, history, food,
-lights, hiking, caves, town. Add `fly:true` for destinations that need a flight.
+Tags (24, the same keys as the interest chips): scenic, parks, hiking, waterfalls,
+caves, wildlife, gardens, camping, golf, beach, lighthouses, water, fishing, history,
+town, food, music, drinks, art, themeparks, family, spa, markets, lights. Add
+`fly:true` for destinations that need a flight.
 
 Addresses: use a house number only when OpenStreetMap gives both the number and the
 road. Otherwise write the place name and town ("Marblehead Lighthouse, Marblehead,

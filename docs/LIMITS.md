@@ -15,3 +15,7 @@
 | No ratings for places | The app cannot say how highly a place is rated | The free services the app uses carry no ratings; rating services need paid keys. The catalog lists widely known, visitor-open places instead |
 | Posting feedback on GitHub needs a free account | Some testers cannot post | Save as a file or Copy text on the Feedback card |
 | Alaska has no lighthouse stop | Lighthouse fans see none there | None near the Seward trip can be reached by road |
+| A town you type in City is not in the catalog | The app has no hand-picked places for it | It finds the town on OpenStreetMap and builds the trip from catalog places within about an hour's drive (an estimate; mountain roads take longer). A town with none nearby gets free days to fill with the search box |
+| Camping and RV parks marks parks with a campground nearby | The itinerary still books a hotel each night | Book campsites on the park's own site or [Recreation.gov](https://www.recreation.gov) and change the hotel stops to your campground |
+| Fishing rules, ages, seasons, and fees differ by state, and national parks can set their own | A state license may not be enough everywhere | Each fishing trip links the state's official license page; check the park's rules too |
+| Spas, golf, music, and other businesses change hours, owners, or names | A place can close | The catalog favors long-running, well-known places; every itinerary says to verify |

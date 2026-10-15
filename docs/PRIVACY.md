@@ -12,7 +12,10 @@
 - The app sends only what each lookup needs: place-search text to OpenStreetMap
   Nominatim, stop coordinates to the OSRM router, stop coordinates to the National
   Weather Service, and, only if you add your own key, your trip preferences to the
-  Anthropic API.
+  Anthropic API. A town typed in **City** goes to Nominatim once, and only when the
+  catalog does not already have it; catalog towns need no lookup.
+- Fishing license links open each state's official wildlife agency page. The app
+  sends nothing to those sites; you buy the license there yourself.
 - The contact email in Settings is optional and is not an account; no sign-up is
   needed anywhere. If you fill it in, it is sent only with place searches to
   OpenStreetMap, which asks heavy users to include one.

@@ -3,14 +3,13 @@
 (function () {
   const RT = window.RT, U = RT.util, esc = RT.esc;
   const KEY = "rtp:v1";
-  const INTERESTS = [["scenic","Scenic drives and views"],["parks","National and state parks"],["waterfalls","Waterfalls"],["beach","Beaches"],["lighthouses","Lighthouses"],["fishing","Fishing"],["water","Kayak, boat, and water sports"],["history","History and museums"],["food","Food and local dining"],["lights","Holiday lights and festivals"],["hiking","Easy hikes"],["caves","Caves"],["town","Small towns and shopping"]];
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.4.2";
+  const APP_VERSION = "0.5.0";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
-  const ICONS = new Set(["scenic","parks","waterfalls","beach","lighthouses","fishing","water","history","food","lights","hiking","caves","town"]);
-  const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
+  const ICONS = new Set(RT.INTERESTS.map(i => i[0]));
+  const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" || k === "pin" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
 
   // ---------- state ----------
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
@@ -63,7 +62,8 @@
   const tripStates = () => { if (!st.trip) return []; const s = new Set(st.trip.states || []); if (st.profile.home.state) { const h = RT_STATE_BY_NAME[st.profile.home.state.toLowerCase()]; if (h) s.add(h.abbr); } return [...s]; };
 
   // ---------- tabs ----------
-  function setTab(t) { st.tab = t; document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t))); render(); view.focus(); window.scrollTo(0, 0); }
+  function setTab(t) { if (t === "destinations" && needsCity()) resolveCity().then(() => { if (st.tab === "destinations") render(); });
+    st.tab = t; document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t))); render(); view.focus(); window.scrollTo(0, 0); }
   $("#tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); });
 
   function render() {
@@ -119,6 +119,11 @@
     plains: `<circle cx="240" cy="24" r="11" class="sun"/><path class="far" d="M0 62 C70 50 160 58 230 50 C270 46 300 50 320 48 L320 80 L0 80Z"/><path class="near" d="M0 80 L0 70 C90 64 200 70 320 66 L320 80Z"/><path class="fence" d="M20 72 V62 M50 71 V61 M80 71 V61 M110 72 V62 M20 65 H110"/>`
   };
   const scene = d => `<svg class="scene scene-${sceneKind(d)}" viewBox="0 0 320 80" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><rect class="sky" width="320" height="80"/>${SCENE[sceneKind(d)]}</svg>`;
+  // Fishing: when the traveler picks it, every page that plans the trip links each
+  // state's official page for buying a fishing license online (data/states.js).
+  const fishingOn = () => st.profile.interests.includes("fishing");
+  const fishLinks = states => [...new Set(states)].map(a => RT_STATE_BY_ABBR[a]).filter(s => s && s.fish).map(s => `<a href="${esc(s.fish)}" target="_blank" rel="noopener">${esc(s.name)} fishing license</a>`).join(" · ");
+  const fishLine = states => { const l = fishingOn() ? fishLinks(states) : ""; return l ? `<p class="small fish-license">${icon("fishing")}<span>Buy online: ${l}</span></p>` : ""; };
   const experiencesList = (list, cls = "") => list && list.length ? `<div class="exp ${cls}"><p class="exp-title">Only here</p><ul>${list.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
 
   // ---------- step bar ----------
@@ -130,7 +135,7 @@
     const n = FLOW.length, prev = FLOW[i - 1], next = FLOW[i + 1], to = `<span aria-hidden="true">&rarr;</span>`;
     let go = "";
     if (tab === "interview") go = `<button class="btn big step-next" data-act="findDest">Next: Show me trips ${to}</button>`;
-    else if (tab === "destinations") go = (st.recs.length ? `<button class="btn big step-next" data-act="build" data-i="0">Next: Build the best match ${to}</button>` : "") + (st.trip ? `<button class="btn ghost" data-act="go" data-t="trip">Keep my current trip</button>` : "");
+    else if (tab === "destinations") go = (st.recs.length ? `<button class="btn big step-next" data-act="build" data-i="0">${st.recs[0].pick ? `Next: Build the ${esc(st.recs[0].dest.name)} trip` : "Next: Build the best match"} ${to}</button>` : "") + (st.trip ? `<button class="btn ghost" data-act="go" data-t="trip">Keep my current trip</button>` : "");
     else if (!st.trip) go = `<button class="btn big step-next" data-act="go" data-t="interview">Plan a trip first</button>`;
     else if (!next) go = `<button class="btn big step-next" data-act="saveTrip">Save my trip</button><button class="btn ghost" data-act="go" data-t="feedback">Give feedback</button>`;
     else go = `<button class="btn big step-next" data-act="go" data-t="${next[0]}">Next: ${esc(next[1])} ${to}</button>`;
@@ -141,6 +146,16 @@
 
   // ---------- interview ----------
   const chip = (act, k, label, on, extra = "") => `<button class="chip" data-act="${act}" data-k="${k}" aria-pressed="${on}" ${extra}>${icon(k)}${label}</button>`;
+  const interestChips = p => RT.INTEREST_GROUPS.map(([g, list]) => `<div class="chip-group"><h3 class="chip-head">${esc(g)}</h3><div class="chips">${list.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div></div>`).join("");
+  // Where to: a state narrows the ranking; a town, when the traveler knows it, goes first.
+  const cityOptions = state => [...new Set(RT_CATALOG.filter(d => !state || d.states.includes(state)).map(d => d.base[0]))].sort().map(c => `<option value="${esc(c)}"></option>`).join("");
+  function whereTo(p, id) {
+    const stName = p.destState ? (RT_STATE_BY_ABBR[p.destState] || {}).name || p.destState : "";
+    const lab = (f, text, inner) => `<div class="field"><label for="${id}-${f}">${text}</label>${inner}</div>`;
+    return `<div class="row where" role="group" aria-label="Where to">${lab("state", "Where to", `<select id="${id}-state" data-bind="profile.destState" data-rescore="1"><option value="">Anywhere within reach</option>${RT_STATES.map(s => `<option value="${s.abbr}" ${p.destState === s.abbr ? "selected" : ""}>${s.name}</option>`).join("")}</select>`)}
+      ${lab("city", "City (optional)", `<input type="text" id="${id}-city" list="${id}" data-bind="profile.destCity" data-city="1" value="${esc(p.destCity || "")}" placeholder="${stName ? `Any city in ${esc(stName)}` : "Any city, e.g. Gatlinburg"}" autocomplete="off" enterkeyhint="go" aria-describedby="${id}-help"><datalist id="${id}">${cityOptions(p.destState)}</datalist>`)}</div>
+      <p class="small muted" id="${id}-help">Know the town? Type it, and that trip comes first. Leave it blank to see the best cities for your interests.</p>`;
+  }
   function vInterview() {
     const p = st.profile, pace = p.rules.pace || "balanced", comfort = p.lodging.comfort || "mid";
     const homeLine = p.home.lat != null ? `<p class="small ok">Starting from <b>${esc(p.home.label)}</b>. <button class="btn small ghost" data-act="homeClear">Change</button></p>` : `<p class="small muted">Your town sets the drive time to every destination.</p>`;
@@ -177,12 +192,12 @@
     </details>`;
     return `${hero()}<div class="card">
       <h2>Where are you starting from?</h2>${home}
-      <h2>When, and for how long?</h2>
+      <h2>When, where, and for how long?</h2>
       <div class="row">${field("Leaving on", `<input type="date" data-bind="startDate" value="${esc(st.startDate)}">`)}
-      ${field("Nights away", num("nights", st.nights, 'min="1" max="21"'))}
-      ${field("Where to", `<select data-bind="profile.destState" data-rescore="1"><option value="">Anywhere within reach</option>${RT_STATES.map(s => `<option value="${s.abbr}" ${p.destState === s.abbr ? "selected" : ""}>${s.name}</option>`).join("")}</select>`)}</div>
+      ${field("Nights away", num("nights", st.nights, 'min="1" max="21"'))}</div>
+      ${whereTo(p, "cityList")}
       <h2>What do you enjoy?</h2><p class="small muted">Three are picked already. Tap to change; more picks sharpen the ranking.</p>
-      <div class="chips">${INTERESTS.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div>
+      ${interestChips(p)}
       ${details}
       <p class="small muted" style="margin:14px 0 0">When you are ready, tap <b>Next: Show me trips</b> below. Trips are ranked for your interests, the season, and the drive from home.</p></div>`;
   }
@@ -195,29 +210,77 @@
   // ---------- destinations ----------
   function vDestinations() {
     const p = st.profile, state = p.destState || "";
-    if (!st.recs.length) st.recs = RT.scoreDestinations(p, RT_CATALOG, st.month || +st.startDate.slice(5, 7), +st.nights, state);
+    if (!st.recs.length) st.recs = RT.rankWithPick(p, RT_CATALOG, st.month || +st.startDate.slice(5, 7), +st.nights, state, pickDest());
     const ai = !!p.aiKey, stName = state ? (RT_STATE_BY_ABBR[state] || {}).name || state : "";
-    const shown = state ? st.recs : st.recs.slice(0, 12);
-    const card = (r, i) => `<div class="card dest ${i === 0 ? "best" : ""}" data-act="build" data-i="${i}" role="button" tabindex="0" aria-label="Build ${esc(r.dest.name)}">
-        <div class="dest-art">${scene(r.dest)}<span class="rank" title="Rank ${r.rank}">#${r.rank}</span>${i === 0 ? `<span class="best-tag">Best match</span>` : ""}</div>
+    const pick = st.recs[0] && st.recs[0].pick ? st.recs[0] : null, best = pick ? 1 : 0;
+    const shown = state ? st.recs : st.recs.slice(0, 12 + best);
+    const missing = p.destPlace && p.destPlace.missing ? p.destPlace.q : "";
+    const places = r => { const list = r.stopsRanked.slice(0, 10).map(s => s.hits ? `<b>${esc(s.name)}</b>` : esc(s.name)).join(" · "); return r.stopsRanked.length > 10 ? `${list} · and ${r.stopsRanked.length - 10} more` : list; };
+    const card = (r, i) => `<div class="card dest ${r.pick ? "pick" : i === best ? "best" : ""}" data-act="build" data-i="${i}" role="button" tabindex="0" aria-label="Build ${esc(r.dest.name)}">
+        <div class="dest-art">${scene(r.dest)}${r.pick ? `<span class="rank pin" title="Your city">${icon("pin")}</span><span class="best-tag">Your city</span>` : `<span class="rank" title="Rank ${r.rank}">#${r.rank}</span>${i === best ? `<span class="best-tag">Best match</span>` : ""}`}</div>
         <div class="row" style="justify-content:space-between"><strong class="dest-name">${esc(r.dest.name)}</strong><span class="fit ${r.label.replace(/\s.*/, "")}">${r.label}</span></div>
-        <div class="small muted">Stay in <b>${esc(r.city)}</b> · ${r.dest.states.join(", ")} · best ${r.dest.months.map(m => MONTHS[m - 1]).join(" ")}</div>
+        <div class="small muted">Stay in <b>${esc(r.city)}</b> · ${esc(r.dest.states.join(", "))} · best ${r.dest.months.map(m => MONTHS[m - 1]).join(" ")}</div>
         <ul class="small">${r.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-        <div class="small"><span class="muted">Places, best matches first:</span> ${r.stopsRanked.map(s => s.hits ? `<b>${esc(s.name)}</b>` : esc(s.name)).join(" · ")}</div>
+        ${r.stopsRanked.length ? `<div class="small"><span class="muted">Places, best matches first:</span> ${places(r)}</div>` : ""}
+        ${r.stopsRanked.some(s => s.tags.includes("fishing")) ? fishLine(r.dest.states) : ""}
         ${experiencesList(r.dest.experiences)}
         <div class="row" style="margin-top:8px"><button class="btn small" data-act="build" data-i="${i}">Build this trip</button>${ai ? `<button class="btn small ghost" data-act="buildAI" data-i="${i}">Build with AI</button>` : ""}</div></div>`;
-    return `<div class="pagehead">${icon("route", "ico big")}<h1>${state ? `${esc(stName)}: cities ranked for you` : "Recommended trips"}</h1></div>
-      <p class="muted">${state ? `Every catalog trip that includes ${esc(stName)}, ranked by your interests, the season, and the drive from home. #1 is the best fit. A trip that crosses the state line may stay in a neighboring state.` : "Ranked for your interests, the season, new states, and the drive from home. Tap a trip to build it."} <button class="btn small ghost" data-act="startOver">Change my answers</button></p>
-      <div class="row noprint" style="margin-bottom:10px">${field("Where to", `<select data-bind="profile.destState" data-rescore="1"><option value="">Anywhere within reach</option>${RT_STATES.map(s => `<option value="${s.abbr}" ${state === s.abbr ? "selected" : ""}>${s.name}</option>`).join("")}</select>`)}
-      ${field("Month to rank for", `<select data-bind="month" data-rescore="1"><option value="">Trip month</option>${MONTHS.map((m, i) => `<option value="${i + 1}" ${st.month == i + 1 ? "selected" : ""}>${m}</option>`).join("")}</select>`)}
-      ${ai ? `<button class="btn ghost" data-act="aiOpen">Ask AI for a custom trip</button>` : ""}</div>
+    const title = pick ? `${esc(pick.dest.name)} first, then ${state ? `${esc(stName)} ranked for you` : "more ideas ranked for you"}` : state ? `${esc(stName)}: cities ranked for you` : "Recommended trips";
+    const lead = pick ? `Your city is first. ${state ? `Below it, every other catalog trip that includes ${esc(stName)}` : "Below it, other trips"}, ranked by your interests, the season, and the drive from home.` : state ? `Every catalog trip that includes ${esc(stName)}, ranked by your interests, the season, and the drive from home. #1 is the best fit. A trip that crosses the state line may stay in a neighboring state.` : "Ranked for your interests, the season, new states, and the drive from home. Tap a trip to build it.";
+    return `<div class="pagehead">${icon("route", "ico big")}<h1>${title}</h1></div>
+      <p class="muted">${lead} <button class="btn small ghost" data-act="startOver">Change my answers</button></p>
+      ${missing ? `<p class="note warnline">Could not find <b>${esc(missing)}</b> on the map. Check the spelling, add the state (for example ${esc(missing)}, ${esc(state || "TN")}), or leave City blank.</p>` : ""}
+      <div class="noprint" style="margin-bottom:10px">${whereTo(p, "cityList2")}
+      <div class="row">${field("Month to rank for", `<select data-bind="month" data-rescore="1"><option value="">Trip month</option>${MONTHS.map((m, i) => `<option value="${i + 1}" ${st.month == i + 1 ? "selected" : ""}>${m}</option>`).join("")}</select>`)}
+      ${ai ? `<button class="btn ghost" data-act="aiOpen">Ask AI for a custom trip</button>` : ""}</div></div>
       <details class="more"><summary>Your interests and states visited</summary>
         <p class="small muted">Tap to change. New states rank higher.</p>
-        <div class="chips" style="margin-bottom:10px">${INTERESTS.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div>
+        ${interestChips(p)}
         ${statesGrid(true)}</details>
-      ${shown.length ? `<div class="grid">${shown.map(card).join("")}</div>` : `<div class="card"><p>No catalog city in ${esc(stName)} yet. Pick "Anywhere within reach", or add one (see docs/CATALOG.md in the project).</p></div>`}
+      ${shown.length ? `<div class="grid">${shown.map(card).join("")}</div>` : `<div class="card"><p>No catalog city in ${esc(stName)} yet. Type a town in City, pick "Anywhere within reach", or add one (see docs/CATALOG.md in the project).</p></div>`}
       ${!ai ? `<p class="small muted">Optional: AI-written itineraries need your own Anthropic API key. <button class="btn small ghost" data-act="go" data-t="settings">Set it up in Settings</button></p>` : ""}`;
   }
+  // The traveler's own pick from the City field: a catalog trip, a looked-up town, or
+  // none. A saved pick counts only while City and Where to still say what it was for.
+  const cityNow = () => (st.profile.destCity || "").trim();
+  const pickFresh = () => { const d = st.profile.destPlace; return !!d && d.q === cityNow() && (d.st || "") === (st.profile.destState || ""); };
+  function pickDest() {
+    const d = st.profile.destPlace; if (!pickFresh() || d.missing) return null;
+    if (d.id) return RT_CATALOG.find(x => x.id === d.id) || null;
+    return d.lat != null ? RT.cityDestination({ label: String(d.label || d.q), lat: +d.lat, lon: +d.lon, abbr: RT_STATE_BY_ABBR[d.abbr] ? d.abbr : "" }, RT_CATALOG) : null;
+  }
+  // Turn the City text into a pick. Catalog towns need no network; any other town is
+  // looked up once (OpenStreetMap) and remembered with the profile. One lookup runs at
+  // a time, and a result is dropped if City or Where to changed while it ran.
+  let resolving = null;
+  function resolveCity() {
+    if (resolving) return resolving;
+    resolving = (async () => {
+      const p = st.profile;
+      for (let guard = 0; guard < 3 && !pickFresh(); guard++) {
+        const q = cityNow(), state = p.destState || "";
+        if (!q) { p.destPlace = null; break; }
+        const hit = RT.matchCatalogCity(q, RT_CATALOG, state);
+        if (hit) { p.destPlace = { q, st: state, id: hit.id }; break; }
+        const stName = state ? (RT_STATE_BY_ABBR[state] || {}).name || "" : "";
+        const query = q.includes(",") || !stName || RT.splitTown(q)[1] ? q : `${q}, ${stName}`;
+        toast(`Looking up ${q}…`);
+        let place = null, failed = false;
+        try {
+          let r = (await RT.services.geocode(query))[0];
+          if (!r && query !== q) r = (await RT.services.geocode(q))[0];
+          if (r) { const ab = r.state && RT_STATE_BY_NAME[r.state.toLowerCase()]; place = { q, st: state, label: [r.label.split(",")[0].trim(), ab ? ab.abbr : r.state].filter(Boolean).join(", "), lat: r.lat, lon: r.lon, abbr: ab ? ab.abbr : "" }; }
+        } catch (e) { failed = true; }
+        if (cityNow() !== q || (p.destState || "") !== state) continue; // the traveler changed it meanwhile: look up the new text
+        if (failed) { p.destPlace = null; toast(`Could not look up ${q} right now (offline?). Showing the best cities instead.`); break; }
+        p.destPlace = place || { q, st: state, missing: true };
+        toast(place ? `Found ${place.label}` : `Could not find ${q}. Check the spelling, or leave City blank.`);
+      }
+      st.recs = [];
+    })().finally(() => { resolving = null; });
+    return resolving;
+  }
+  const needsCity = () => !!cityNow() && !pickFresh();
 
   // ---------- trip editor ----------
   const stopLine = (s, di, si, n, shown, leg) => {
@@ -244,8 +307,10 @@
           ${s.notes ? `<div class="small note">${esc(s.notes)}</div>` : ""}
           ${open ? editor : ""}</div></div>`;
   };
+  // The trip's own catalog trip, the trips a town trip draws from, and any day trips.
+  const tripExpIds = t => [...new Set([t.destId, ...(t.nearIds || []), ...t.days.filter(d => /^Day trip: /.test(d.title)).map(d => (RT_CATALOG.find(x => x.name === d.title.slice(10)) || {}).id)])].filter(Boolean);
   function tripExperiences(t) {
-    const ids = [t.destId, ...new Set(t.days.filter(d => /^Day trip: /.test(d.title)).map(d => (RT_CATALOG.find(x => x.name === d.title.slice(10)) || {}).id))].filter(Boolean);
+    const ids = tripExpIds(t);
     const items = ids.flatMap(id => { const d = RT_CATALOG.find(x => x.id === id); return d && d.experiences ? d.experiences.map(e => [d, e]) : []; });
     if (!items.length) return "";
     return `<div class="card exp-card"><h2 style="margin-top:0">Unique experiences on this trip</h2><ul class="exp-links">${items.map(([d, e]) => `<li>${esc(e)} <a class="small" href="${esc(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.replace(/\s*\(.*\)$/, "") + " near " + d.base[0])}`)}" target="_blank" rel="noopener">find it on the map</a></li>`).join("")}</ul><p class="small muted">Seasons, tickets, and reservations change: confirm dates and booking before you go.</p></div>`;
@@ -276,6 +341,7 @@
         ${f.length ? f.map(x => `<div class="finding ${x.level}"><span class="lvl ${x.level}">${x.level}</span>${esc(x.day)} | ${esc(x.check)}: ${esc(x.msg)}</div>`).join("") : ""}
       </div>
       ${tripExperiences(t)}
+      ${fishingOn() && fishLinks(t.states || []) ? `<div class="card fish-card"><h2 style="margin-top:0">${icon("fishing", "ico big")} Fishing license</h2><p class="fish-license">Buy it online from the state's wildlife agency: ${fishLinks(t.states || [])}</p><p class="small muted">Rules, ages, seasons, and fees differ by state, and national parks can set their own fishing rules. Check before you cast.</p></div>` : ""}
       ${hasFree && near.length ? `<div class="card noprint"><h2 style="margin-top:0">Free days: add a day trip</h2><p class="small muted">Within reach of ${esc(t.base.addr)}. Tap one to fill your free days with its best stops.</p><div class="chips">${near.map(x => `<button class="chip" data-act="addDest" data-id="${x.dest.id}">${esc(x.dest.name)} <span class="small muted">(${x.hours < 1 ? "under an hour" : `about ${Math.round(x.hours)} h`} away)</span></button>`).join("")}</div></div>` : ""}
       ${t.days.map((d, di) => { const r = st.routes[d.date]; return `<div class="card">
         <div class="row dayhead" style="justify-content:space-between"><div class="row"><span class="shield" aria-hidden="true"><small>DAY</small>${di + 1}</span><h2 style="margin:0">Day ${di + 1} | ${U.dayLabel(d.date)}</h2></div>
@@ -332,6 +398,7 @@
       <p class="small muted">Estimates only. Replace with real hotel rates and admission prices before you book.</p></div>
       <div class="card"><h2>Booking checklist</h2><p class="small muted">You book. The app never reserves or pays.</p><ul>
       ${book.map(x => x.type === "hotel" ? `<li>☐ Hotel: ${esc(x.s.name)}, night of ${U.dayLabel(x.d.date)} · ${x.s.booking_url ? `<a href="${esc(x.s.booking_url)}" target="_blank" rel="noopener">book or search</a>` : `<a href="${esc(RT.lodgingSearchUrl(st.profile.lodging.brand, x.s.address))}" target="_blank" rel="noopener">search hotels</a>`}</li>` : `<li>☐ ${esc(x.s.name)}, ${U.dayLabel(x.d.date)}${x.s.timed_entry ? ` (entry ${U.hm12(x.s.timed_entry)})` : ""} ${x.s.booking_url ? `· <a href="${esc(x.s.booking_url)}" target="_blank" rel="noopener">book</a>` : ""}</li>`).join("")}</ul>
+      ${fishingOn() && fishLinks(t.states || []) ? `<div class="fish-license small">☐ Buy online: ${fishLinks(t.states || [])}</div>` : ""}
       <p class="small muted">To add a booking link, open the itinerary, tap <b>Edit</b> on the stop, and fill in <b>Booking link</b>. <button class="btn small ghost" data-act="go" data-t="trip">Open the itinerary</button></p></div>`;
   }
 
@@ -456,7 +523,7 @@
     pace: el => { RT.applyPace(st.profile, el.dataset.k); st.details = true; st.recs = []; render(); toast(`${RT.PACE[el.dataset.k].label} pace set`); },
     comfort: el => { RT.applyComfort(st.profile, el.dataset.k, +st.nights); st.details = true; render(); toast(`${RT.COMFORT[el.dataset.k].label}: budget cap now ${money(st.profile.rules.budgetCap)}`); },
     toggleState: el => { const a = st.profile.visited, s = el.dataset.s, i = a.indexOf(s); i >= 0 ? a.splice(i, 1) : a.push(s); st.recs = []; render(); },
-    findDest: () => { if (st.profile.home.lat == null) { toast("Tell the app where you start: type your town or tap Use my location"); const q = $("#homeQ"); if (q) q.focus(); return; } st.recs = []; setTab("destinations"); },
+    findDest: async () => { const f = $("[data-bind='profile.destCity']"); if (f) st.profile.destCity = f.value; if (st.profile.home.lat == null) { toast("Tell the app where you start: type your town or tap Use my location"); const q = $("#homeQ"); if (q) q.focus(); return; } st.recs = []; await resolveCity(); setTab("destinations"); },
     startOver: () => { st.recs = []; setTab("interview"); },
     build: async el => {
       const r = st.recs[+el.dataset.i]; if (!r) return;
@@ -518,8 +585,8 @@
 <body style="font-family:system-ui;max-width:760px;margin:auto;padding:16px;color:#1d2422"><h1>${esc(t.name)}</h1>
 <p>${U.dayLabel(t.days[0].date)} to ${U.dayLabel(t.days[t.days.length - 1].date)} | ${t.days.length - 1} nights | about ${b.miles} miles | budget ${money(b.total[0])} to ${money(b.total[1])} (cap ${money(b.cap)})</p>
 <h2>Stop-by-stop list</h2><table border="1" cellpadding="5" style="border-collapse:collapse;width:100%;font-size:14px"><tr><th>#</th><th>Day</th><th>Time</th><th>Stop</th><th>Address</th></tr>${rows}</table>
-${(() => { const d = RT_CATALOG.find(x => x.id === t.destId); return d && d.experiences ? `<h2>Unique experiences</h2><ul>${d.experiences.map(e => `<li>${esc(e)}</li>`).join("")}</ul>` : ""; })()}<h2>Navigation</h2><ul>${t.days.map((d, i) => RT.dayLinks(d).map((u, k, a) => `<li><a href="${esc(u)}">Day ${i + 1} ${esc(d.title)}${a.length > 1 ? ` part ${k + 1}` : ""}</a></li>`).join("")).join("")}</ul>
-<h2>Weather and road watch</h2><ul>${states.map(s => `<li><a href="${esc(s.roads)}">${esc(s.name)} road conditions</a></li>`).join("")}<li><a href="https://www.nps.gov/planyourvisit/alerts.htm">NPS alerts</a></li>${t.days.map(d => { const s = d.stops[d.stops.length - 1]; return s.lat != null && s.lat !== "" ? `<li><a href="${esc(RT.services.forecastPage(s.lat, s.lon))}">Forecast: ${esc(s.name)} (${U.dayLabel(d.date)})</a></li>` : ""; }).join("")}</ul>
+${(() => { const xs = tripExpIds(t).flatMap(id => (RT_CATALOG.find(x => x.id === id) || {}).experiences || []); return xs.length ? `<h2>Unique experiences</h2><ul>${xs.map(e => `<li>${esc(e)}</li>`).join("")}</ul>` : ""; })()}<h2>Navigation</h2><ul>${t.days.map((d, i) => RT.dayLinks(d).map((u, k, a) => `<li><a href="${esc(u)}">Day ${i + 1} ${esc(d.title)}${a.length > 1 ? ` part ${k + 1}` : ""}</a></li>`).join("")).join("")}</ul>
+${fishingOn() && fishLinks(t.states || []) ? `<h2>Fishing licenses</h2><p>Buy online: ${fishLinks(t.states || [])}</p>` : ""}<h2>Weather and road watch</h2><ul>${states.map(s => `<li><a href="${esc(s.roads)}">${esc(s.name)} road conditions</a></li>`).join("")}<li><a href="https://www.nps.gov/planyourvisit/alerts.htm">NPS alerts</a></li>${t.days.map(d => { const s = d.stops[d.stops.length - 1]; return s.lat != null && s.lat !== "" ? `<li><a href="${esc(RT.services.forecastPage(s.lat, s.lon))}">Forecast: ${esc(s.name)} (${U.dayLabel(d.date)})</a></li>` : ""; }).join("")}</ul>
 <h2>Plan check</h2><ul>${(st.findings.length ? st.findings : [{ level: "INFO", day: "", check: "", msg: "No findings at export time" }]).map(f => `<li><b>${f.level}</b> ${esc(f.day)} ${esc(f.check)} ${esc(f.msg)}</li>`).join("")}</ul>
 <p style="font-size:12px;color:#666">Planning only; verify hours, prices, and closures before travel. Map data © OpenStreetMap contributors.</p></body>`;
   }
@@ -572,11 +639,14 @@ ${(() => { const d = RT_CATALOG.find(x => x.id === t.destId); return d && d.expe
   view.addEventListener("change", e => {
     fbInput(e);
     const el = e.target;
-    if (el.dataset.bind) { let v = el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value === "" ? 0 : +el.value) : el.value; if (el.dataset.bind === "month") v = v ? +v : null; setPath(el.dataset.bind, v); if (el.dataset.rescore || el.dataset.bind === "startDate" || el.dataset.bind === "nights") st.recs = []; if (el.dataset.rescore) render(); else persist(); }
+    if (el.dataset.bind) { let v = el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value === "" ? 0 : +el.value) : el.value; if (el.dataset.bind === "month") v = v ? +v : null; setPath(el.dataset.bind, v); if (el.dataset.rescore || el.dataset.bind === "startDate" || el.dataset.bind === "nights") st.recs = [];
+      if (el.dataset.city || (el.dataset.bind === "profile.destState" && cityNow())) { st.recs = []; if (st.tab === "destinations") { render(); resolveCity().then(() => { if (st.tab === "destinations") render(); }); } else if (el.dataset.city) persist(); else render(); }
+      else if (el.dataset.rescore) render(); else persist(); }
     if (el.dataset.tripbind) { const ks = el.dataset.tripbind.split("."); const last = ks.pop(); const o = ks.reduce((x, k) => x[k], st.trip); o[last] = el.type === "checkbox" ? el.checked : el.value; if (ks[0] === "days") delete st.routes[st.trip.days[+ks[1]].date]; persist(); }
     if (el.dataset.act === "loadTrip" || el.dataset.act === "restore") readFile(el);
   });
-  view.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "homeQ") actions.homeSearch(); if (e.key === "Enter" && /^add-/.test(e.target.id)) actions.addStop({ dataset: { d: e.target.id.slice(4) } }); if ((e.key === "Enter" || e.key === " ") && e.target.matches(".dest[data-act=build]")) { e.preventDefault(); actions.build(e.target); } });
+  view.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset && e.target.dataset.city) { e.preventDefault(); st.profile.destCity = e.target.value; st.recs = []; if (st.tab === "interview") actions.findDest(); else { render(); resolveCity().then(() => { if (st.tab === "destinations") render(); }); } return; }
+    if (e.key === "Enter" && e.target.id === "homeQ") actions.homeSearch(); if (e.key === "Enter" && /^add-/.test(e.target.id)) actions.addStop({ dataset: { d: e.target.id.slice(4) } }); if ((e.key === "Enter" || e.key === " ") && e.target.matches(".dest[data-act=build]")) { e.preventDefault(); actions.build(e.target); } });
   view.addEventListener("toggle", e => { if (e.target.dataset && e.target.dataset.details) st.details = e.target.open; }, true);
   // Trip files written for the command-line version keep days beside the trip and use snake_case rules.
   function fromCommandLine(j) {
