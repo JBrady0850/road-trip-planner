@@ -1,0 +1,37 @@
+name: Report a problem
+description: Something in the app did not work the way it should.
+title: "[Problem]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please leave out personal details; this page is public.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What did you tap or click, in order?
+      placeholder: |
+        1. Opened Plan a trip
+        2. Tapped Show me trips
+        3. ...
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version

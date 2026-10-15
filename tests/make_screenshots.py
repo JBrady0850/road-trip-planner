@@ -93,6 +93,11 @@ def main():
             shot("06-budget-booking")
             page.click("#tabs [data-tab=tracker]")
             shot("07-tracker")
+            page.click("#tabs [data-tab=feedback]")
+            page.fill("[data-fb=task]", "Planned a long weekend in the mountains")
+            page.click("[data-fb-ease='4']")
+            page.fill("[data-fb=ideas]", "More lighthouses on the Great Lakes")
+            shot("10-feedback")
             ctx.close()
 
         # tablet, portrait

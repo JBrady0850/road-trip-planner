@@ -1,0 +1,24 @@
+name: Suggest an improvement
+description: A feature, a destination, or a change that would make planning easier.
+title: "[Idea]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want to talk an idea through first? Start a conversation in
+        [Ideas](https://github.com/JBrady0850/road-trip-planner/discussions/categories/ideas).
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What would it help you do?
+  - type: textarea
+    id: example
+    attributes:
+      label: An example, a place, or a link (optional)

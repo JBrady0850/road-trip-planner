@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Share an idea or ask a question
+    url: https://github.com/JBrady0850/road-trip-planner/discussions/categories/ideas
+    about: Talk through an idea with other travelers before it becomes a request.
+  - name: Use the app
+    url: https://jbrady0850.github.io/road-trip-planner/
+    about: Open Road Trip Planner. The Give feedback card fills in the tester form for you.

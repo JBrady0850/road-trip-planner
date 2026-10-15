@@ -62,6 +62,8 @@ def main():
             page.click("#homeResults [data-pick='0']")
             page.wait_for_selector("text=Starting from")
             assert page.locator("[data-act=interest][aria-pressed=true]").count() == 3, "three interests are preselected"
+            assert page.locator("[data-act=interest][data-k=lighthouses]").count() == 1, "Lighthouses is an interest"
+            assert page.locator(".hero .sign h1").inner_text() == "Plan a road trip"
             page.click("[data-act=interest][data-k=waterfalls]")
             page.click("[data-act=interest][data-k=hiking]")
             # the optional details: presets fill the numbers
@@ -75,7 +77,7 @@ def main():
             if SHOTS: page.screenshot(path=str(SHOTS / f"{name}-1-interview.png"), full_page=True)
             page.click("[data-act=findDest]")
             page.wait_for_selector("text=Recommended trips")
-            assert "Best match" in page.inner_text(".grid .card.best")
+            assert "best match" in page.inner_text(".grid .card.best").lower()
             page.click("summary:has-text('states visited')")
             page.click("[data-act=toggleState][data-s=TN]")
             page.wait_for_selector("text=Recommended trips")

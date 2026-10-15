@@ -28,3 +28,51 @@ def test_river_bend_overlook_is_at_the_overlook():
     lat, lon, address = stops()["North Unit River Bend Overlook"]
     assert km((lat, lon), (47.6087, -103.3782)) < 1.0
     assert address.startswith("Riverbend Overlook")
+
+
+# Ocean, Gulf, and Great Lakes states. Alaska is coastal but has no lighthouse that a
+# visitor can reach by road near the catalog trip (Seward); it is listed in
+# docs/CATALOG.md as the one exception.
+COASTAL = {"ME", "NH", "MA", "RI", "CT", "NY", "NJ", "DE", "MD", "VA", "NC", "SC", "GA", "FL",
+           "AL", "MS", "LA", "TX", "CA", "OR", "WA", "HI", "MN", "WI", "MI", "IL", "IN", "OH", "PA"}
+DEST = re.compile(r'\{id:"([^"]+)".*?states:\[([^\]]*)\].*?tags:\[([^\]]*)\](.*?)stops:\[(.*?)\]\]\}', re.S)
+
+
+STOP_FULL = re.compile(r'\[("(?:[^"\\]|\\.)*"),\s*"(?:[^"\\]|\\.)*",\s*-?[\d.]+,\s*-?[\d.]+,\s*\d+,\s*(\[[^\]]*\])\]')
+
+
+def destinations():
+    text = CATALOG.read_text(encoding="utf-8")
+    return [{"id": m[1], "states": json.loads(f"[{m[2]}]"), "tags": json.loads(f"[{m[3]}]"), "head": m[4],
+             "stops": [(json.loads(n), json.loads(t)) for n, t in STOP_FULL.findall(m[5] + "]")]} for m in DEST.finditer(text)]
+
+
+def test_catalog_parser_reads_every_destination_and_stop():
+    ds = destinations()
+    assert len(ds) == len(re.findall(r'\{id:"', CATALOG.read_text(encoding="utf-8")))
+    assert sum(len(d["stops"]) for d in ds) == len(stops()), "the destination parser must see every stop"
+
+
+def test_every_coastal_state_has_a_lighthouse():
+    covered = set()
+    for d in destinations():
+        if any("lighthouses" in tags for _, tags in d["stops"]):
+            covered.update(d["states"])
+    assert COASTAL <= covered, f"coastal states without a lighthouse stop: {sorted(COASTAL - covered)}"
+
+
+def test_lighthouse_stops_are_tagged_and_so_is_their_destination():
+    for d in destinations():
+        for name, tags in d["stops"]:
+            if re.search(r"light(house| station)|\blight\b", name, re.I) and "Lights" not in name:
+                assert "lighthouses" in tags, f"{d['id']}: {name} is not tagged lighthouses"
+        if any("lighthouses" in tags for _, tags in d["stops"]):
+            assert "lighthouses" in d["tags"], f"{d['id']} has lighthouse stops but no lighthouses tag"
+
+
+def test_every_destination_has_unique_experiences():
+    for d in destinations():
+        found = re.search(r"experiences:\[(.*?)\]", d["head"], re.S)
+        assert found, f"{d['id']} has no experiences"
+        items = json.loads(f"[{found.group(1)}]")
+        assert 1 <= len(items) <= 3 and all(len(x) > 15 for x in items), (d["id"], items)

@@ -12,3 +12,6 @@
 | Catalog hours, fees, and seasonal road closures change | A stop can be closed | Every itinerary says to verify; the AI prompt marks unverified details |
 | Straight-line drive estimates in the destination list | Mountain routes take longer | Route check replaces estimates with routed times |
 | Data lives in one browser on one device | Clearing site data erases it | Settings, Back up all data; restore on any device |
+| No ratings for places | The app cannot say how highly a place is rated | The free services the app uses carry no ratings; rating services need paid keys. The catalog lists widely known, visitor-open places instead |
+| Posting feedback on GitHub needs a free account | Some testers cannot post | Save as a file or Copy text on the Feedback card |
+| Alaska has no lighthouse stop | Lighthouse fans see none there | None near the Seward trip can be reached by road |

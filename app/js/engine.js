@@ -45,7 +45,7 @@
   RT.applyComfort = (profile, key, nights) => { const c = RT.COMFORT[key]; if (!c) return false; const L = profile.lodging, D = profile.dining; L.comfort = key; L.nightlyLow = c.nightlyLow; L.nightlyHigh = c.nightlyHigh; D.foodPerDay = c.foodPerDay; D.lunchCap = c.lunchCap; D.upscaleDinners = c.upscaleDinners; profile.rules.budgetCap = RT.suggestCap(profile, nights); return true; };
 
   // ---------- destination scoring ----------
-  const INTEREST_NAMES = { scenic: "scenic drives", parks: "parks", waterfalls: "waterfalls", beach: "beaches", fishing: "fishing", water: "water sports", history: "history", food: "food", lights: "lights and festivals", hiking: "easy hikes", caves: "caves", town: "small towns" };
+  const INTEREST_NAMES = { scenic: "scenic drives", parks: "parks", waterfalls: "waterfalls", beach: "beaches", fishing: "fishing", water: "water sports", history: "history", food: "food", lights: "lights and festivals", hiking: "easy hikes", caves: "caves", town: "small towns", lighthouses: "lighthouses" };
   RT.interestName = k => INTEREST_NAMES[k] || k;
   const hoursText = h => h < 0.75 ? "under an hour" : h < 1.5 ? "about 1 hour" : `about ${Math.round(h)} hours`;
   /* Rank catalog destinations for a profile. `nights` is the trip being planned

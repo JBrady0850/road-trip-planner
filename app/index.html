@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1f4d3a">
+<meta name="theme-color" content="#0b6b3a">
 <title>Road Trip Planner</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -16,8 +16,25 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-route" viewBox="0 0 24 24"><path d="M5 3h14l-1.5 9.5c-.7 4.4-3 6.8-5.5 8.5-2.5-1.7-4.8-4.1-5.5-8.5z"/><path d="M5.6 7h12.8"/></symbol>
+  <symbol id="i-scenic" viewBox="0 0 24 24"><path d="M7 21 10 3M17 21 14 3M12 5.5v2M12 10.5v2.5M12 16v3"/></symbol>
+  <symbol id="i-parks" viewBox="0 0 24 24"><path d="M12 3 5 13h4l-3.5 5h13L15 13h4zM12 18v3"/></symbol>
+  <symbol id="i-waterfalls" viewBox="0 0 24 24"><path d="M3 4h18M7 4v9M12 4v11M17 4v9M3 19c2-2 4 2 6 0s4 2 6 0 4 2 6 0"/></symbol>
+  <symbol id="i-beach" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 18 0zM12 12v8M3 21h18"/></symbol>
+  <symbol id="i-lighthouses" viewBox="0 0 24 24"><path d="M10 21l.8-11h2.4l.8 11zM9 10h6M10 7h4v3h-4zM12 4.5V7M3 6.5l5.5 1.5M21 6.5 15.5 8M6 21h12"/></symbol>
+  <symbol id="i-fishing" viewBox="0 0 24 24"><path d="M3 12c3.5-5 9.5-5 13 0-3.5 5-9.5 5-13 0zM16 12l5-4v8z"/><circle cx="7.5" cy="11" r=".9"/></symbol>
+  <symbol id="i-water" viewBox="0 0 24 24"><path d="M2 18c2-2 4 2 6 0s4 2 6 0 4 2 6 0M4 14l16-6M9 7.5l3 7"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 9l9-5 9 5M5 9v9M9.5 9v9M14.5 9v9M19 9v9M3 20h18"/></symbol>
+  <symbol id="i-food" viewBox="0 0 24 24"><path d="M7 3v18M5 3v5a2 2 0 0 0 4 0V3M16 21V3c-2.5 2-3 7 0 9"/></symbol>
+  <symbol id="i-lights" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></symbol>
+  <symbol id="i-hiking" viewBox="0 0 24 24"><path d="M2 20l6-10 4 6 3-4 7 8zM8 10l1.5 2.5"/></symbol>
+  <symbol id="i-caves" viewBox="0 0 24 24"><path d="M3 20v-8a9 8 0 0 1 18 0v8M8 20v-5a4 4 0 0 1 8 0v5M2 20h20"/></symbol>
+  <symbol id="i-town" viewBox="0 0 24 24"><path d="M3 21V9l5-3v15M8 21V4h8v17M16 21V10h5v11M11 8h2M11 12h2M11 16h2M2 21h20"/></symbol>
+  <symbol id="i-feedback" viewBox="0 0 24 24"><path d="M4 4h16v11H10l-5 4.5V15H4z"/><path d="M8 8.5h8M8 11.5h5"/></symbol>
+</svg>
 <header class="top">
-  <div class="brand"><img src="icon.svg" alt="" width="28" height="28"><span>Road Trip Planner</span></div>
+  <div class="brand"><img src="icon.svg" alt="" width="30" height="30"><span>Road Trip Planner</span></div>
   <nav id="tabs" role="tablist" aria-label="Sections">
     <button data-tab="interview" role="tab">Interview</button>
     <button data-tab="destinations" role="tab">Destinations</button>
@@ -27,10 +44,23 @@
     <button data-tab="budget" role="tab">Budget &amp; Booking</button>
     <button data-tab="tracker" role="tab">50 States</button>
     <button data-tab="settings" role="tab">Settings</button>
+    <button data-tab="feedback" role="tab">Feedback</button>
   </nav>
 </header>
 <div id="install" class="install" role="region" aria-label="Install this app" hidden></div>
 <main id="view" tabindex="-1"></main>
+<footer id="foot" class="foot noprint">
+  <div class="foot-in">
+    <p class="foot-brand">Road Trip Planner <span class="small">version <span id="ver"></span></span></p>
+    <ul class="foot-links">
+      <li><button class="linkish" data-tab="feedback">Give feedback</button></li>
+      <li><a href="https://github.com/JBrady0850/road-trip-planner/discussions/categories/ideas" target="_blank" rel="noopener">Suggest an idea</a></li>
+      <li><a href="https://github.com/JBrady0850/road-trip-planner/issues/new?template=bug-report.yml" target="_blank" rel="noopener">Report a problem</a></li>
+      <li><a href="https://github.com/JBrady0850/road-trip-planner" target="_blank" rel="noopener">Project on GitHub</a></li>
+    </ul>
+    <p class="small foot-note">Free and open source (MIT). Map data &copy; OpenStreetMap contributors. Weather from the National Weather Service. Hours, prices, and closures change: confirm before you go.</p>
+  </div>
+</footer>
 <div id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="pad">This app needs JavaScript turned on.</p></noscript>
 <script src="data/catalog.js"></script>

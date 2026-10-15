@@ -58,5 +58,32 @@ coordinates Nominatim returned, rounded to four decimals (no hand-typed points).
 Places Nominatim could not find, or matched only to a road some distance away
 (Sliding Rock, Bellingrath Gardens, Lower Falls of the Yellowstone, Thunder Hole,
 Sand Beach, and others), were left out rather than guessed. Minutes to spend are
-planning estimates. Street addresses were taken from the Nominatim result where it
-had one; where it had none, the address names the road or the nearest town.
+planning estimates.
+
+## Lighthouses and five coastal trips (2026-10-15)
+
+Every ocean, Gulf, and Great Lakes state now has at least one lighthouse a visitor
+can reach, or a public spot to see one from: 40 lighthouse stops in all. 28 new
+lighthouse stops were placed from Nominatim results; the 12 already in the catalog
+were tagged. Five coastal trips were added where a state had no trip near its shore:
+Mississippi Gulf Coast (Biloxi), South Padre Island and Port Isabel (TX), Chicago
+Lakefront (IL), Lake Erie Islands and Shores (OH), and Erie and Presque Isle (PA).
+
+Notes:
+- Hooper Strait Lighthouse now stands at the Chesapeake Bay Maritime Museum in
+  St. Michaels, MD; the stop is placed at the museum. The "Hooper Strait Light" that
+  OpenStreetMap returns is the light still in the bay.
+- Morris Island (SC) and Sand Island (AL) stand offshore. Their stops use the road
+  where visitors look at them (East Ashley Avenue on Folly Beach, Fort Morgan Road).
+- Alaska is the one coastal state without a lighthouse stop: none near the Seward
+  trip can be reached by road.
+- Not found by name and left out: Point Betsie and Grand Traverse (MI), New Canal
+  (LA), Drum Point (MD), Hunting Island (SC), Middle Bay (AL, offshore only).
+
+## Address audit (2026-10-15)
+
+Every stop added on 2026-10-15 was compared with its saved Nominatim result. 75
+addresses were corrected: house numbers and street names that did not come from
+OpenStreetMap were removed. The rule now is: a street address with a house number
+only when Nominatim gave both the number and the road; otherwise the place name and
+town, which map searches find reliably.

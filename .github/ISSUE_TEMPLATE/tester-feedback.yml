@@ -1,0 +1,51 @@
+name: Tester feedback
+description: Tell us how planning a trip went. The app's Give feedback card fills this in for you.
+title: "[Feedback]: "
+labels: ["tester feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing Road Trip Planner. Short answers are fine. Please leave out
+        personal details such as your home address, phone number, or booking numbers;
+        this page is public.
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      description: For example iPad, Safari; Android tablet, Chrome; Windows computer, Edge.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown at the bottom of the app. The feedback card fills it in.
+  - type: textarea
+    id: task
+    attributes:
+      label: What were you trying to do?
+      placeholder: For example, plan a long weekend near the coast.
+    validations:
+      required: true
+  - type: input
+    id: ease
+    attributes:
+      label: How easy was it? (1 hard, 5 easy)
+  - type: textarea
+    id: liked
+    attributes:
+      label: What worked well?
+  - type: textarea
+    id: problems
+    attributes:
+      label: What was confusing or did not work?
+  - type: textarea
+    id: ideas
+    attributes:
+      label: What would you add or change?
+  - type: input
+    id: trip
+    attributes:
+      label: Trip you were planning (optional)
+      description: Destination and number of nights only.

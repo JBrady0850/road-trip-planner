@@ -6,7 +6,9 @@ destinations that fit your interests, the season, and the drive from home, build
 and checks a day-by-day itinerary in one tap, and gives you phone navigation links,
 a calendar file, map layers, live weather and road links, a budget, a booking
 checklist, and a 50-state tracker. Every setting starts with a sensible value, so
-you change only what is different for you.
+you change only what is different for you. Coastal trips include lighthouses in every
+ocean, Gulf, and Great Lakes state, and every destination lists the experiences you
+can only have there.
 
 It runs on a computer or a tablet. Your data stays on your device.
 
@@ -70,6 +72,7 @@ Screenshots use a sample traveler from Knoxville, TN; weather shown is sample da
 | **3. Trip, built and checked in one tap.** Stops are one line each; tap Edit to change one. Free days offer nearby day trips. ![Trip and plan check](docs/images/03-trip-check.png) | **4. Navigate.** Google Maps routes per day, Waze links per stop, calendar, CSV, and KML downloads. ![Navigate](docs/images/04-navigate.png) |
 | **5. Weather and roads.** National Weather Service forecasts and alerts, plus official state road-condition pages. ![Weather and roads](docs/images/05-weather-roads.png) | **6. Budget and booking.** Estimate against your cap and a checklist with booking links. ![Budget and booking](docs/images/06-budget-booking.png) |
 | **7. 50-state tracker.** Tap states visited; the current trip is outlined. ![50-state tracker](docs/images/07-tracker.png) | **8. Tablet.** The same app on an iPad or Android tablet, added to the home screen. ![Tablet](docs/images/08-tablet.png) |
+| **9. Give feedback.** Testers answer a few questions; one tap fills in the GitHub form, or saves the answers as a file. ![Feedback](docs/images/10-feedback.png) | |
 
 ## Run it from a download (optional)
 
@@ -97,16 +100,19 @@ works: upload the `app` folder as is.
 
 1. **Three questions:** where you start (type a town, or tap **Use my location**),
    when and for how many nights, and what you enjoy (scenic drives, parks,
-   waterfalls, beaches, fishing, water sports, history, food, holiday lights, easy
-   hikes, caves, towns). Three interests are picked for you; change them freely.
+   waterfalls, beaches, lighthouses, fishing, water sports, history, food, holiday
+   lights, easy hikes, caves, towns). Three interests are picked for you; change them freely.
    Optional: choose a destination state, and **Adjust the details** for a pace
    preset (Relaxed, Balanced, Cover ground), a comfort preset (Economy, Mid-range,
    Comfort), and every individual setting underneath, all pre-filled.
-2. **Ranked trips:** a built-in catalog of 49 destinations covering all 50 states is
+2. **Ranked trips:** a built-in catalog of 54 destinations covering all 50 states is
    ranked for your interests, the season, new states, and the drive from home. Each
-   card says why in plain words (Great fit, Good fit, Far for this trip) and lists
-   the city's places with your best matches first. Choose a state to see only that
-   state's cities, numbered from the best fit down.
+   card says why in plain words (Great fit, Good fit, Far for this trip), lists the
+   city's places with your best matches first, and shows what you can only do there
+   (Only here). Choose a state to see only that state's cities, numbered from the
+   best fit down. Pick **Lighthouses** to bring coastal trips to the top: every
+   ocean, Gulf, and Great Lakes state has at least one lighthouse you can visit or
+   see from shore (Alaska is the exception; see [docs/LIMITS.md](docs/LIMITS.md)).
 3. **One-tap itinerary:** tap a trip and the app drafts it, checks it, and fetches
    real drive times. Drive days fit your daily limit; sightseeing days are packed to
    your pace; the day you arrive sees sights on the way in so check-in lands on time;
@@ -130,6 +136,23 @@ works: upload the `app` folder as is.
 9. **50 states:** tap to mark states visited; finished trips mark their states.
 10. **Optional AI itineraries:** add your own Anthropic API key in Settings to have
     Claude write a custom itinerary, which then goes through the same checks.
+11. **Feedback:** the **Feedback** tab asks testers what they tried, how easy it
+    was, what worked, and what to change. **Open on GitHub** fills in the tester form
+    for them; **Save as a file** works without a GitHub account.
+
+## Suggest a change
+
+Ideas, problems, and new destinations are welcome, no code needed.
+
+- **Tester feedback:** the app's **Feedback** tab, or the
+  [tester form](https://github.com/JBrady0850/road-trip-planner/issues/new?template=tester-feedback.yml).
+- **Talk an idea through:** [Ideas discussions](https://github.com/JBrady0850/road-trip-planner/discussions/categories/ideas).
+- **Report a problem:** [problem form](https://github.com/JBrady0850/road-trip-planner/issues/new?template=bug-report.yml).
+- **Suggest an improvement:** [improvement form](https://github.com/JBrady0850/road-trip-planner/issues/new?template=suggest-improvement.yml).
+
+Posting on GitHub needs a free account, and these pages are public, so leave out your
+address and booking numbers. To send code or catalog changes, see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Files
 
@@ -145,7 +168,8 @@ roadtrip/            Python command-line engine for power users (same checks)
 examples/            sample trip file
 prompts/             master prompt template for using an AI assistant as a planner
 docs/                limits, catalog notes, privacy, roadmap
-tests/               Python unit tests and a browser smoke test
+tests/               Python unit tests and browser checks
+.github/             issue forms for feedback, problems, and ideas; workflows
 ```
 
 ## Power users: command line
