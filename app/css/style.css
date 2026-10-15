@@ -199,3 +199,4 @@ main:focus { outline: none; }
 /* fishing license links */
 .fish-license { display: flex; gap: 6px; align-items: flex-start; margin: 8px 0 0; } .fish-license .ico { color: var(--water); flex: none; }
 .fish-card { border-left: 6px solid var(--water); } .fish-card h2 { display: flex; gap: 8px; align-items: center; } .fish-card .ico.big { color: var(--water); }
+.fish-plan { margin: 10px 0 4px; padding: 8px 10px; border-left: 4px solid var(--water); border-radius: 6px; background: var(--bg); }

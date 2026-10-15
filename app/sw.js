@@ -1,8 +1,10 @@
 /* Offline support for the app shell. Files come from the network first, so a
    connected device always gets the newest version; the cached copy is used only
-   when offline. Live services (routing, weather, place search, AI) still need a
+   when offline. GitHub Pages lets browsers keep files for 10 minutes, so every
+   request asks the server whether the file changed ("no-cache"); a reload right
+   after a release then runs the new app, not a stored copy. Live services (routing, weather, place search, AI) still need a
    connection and are never cached. Bump VERSION when the file list changes. */
-const VERSION = "rtp-v0.5.0";
+const VERSION = "rtp-v0.5.1";
 const FILES = ["./", "index.html", "css/style.css", "js/engine.js", "js/services.js", "js/app.js",
   "data/catalog.js", "data/states.js", "manifest.webmanifest", "icon.svg", "icon-180.png",
   "icon-192.png", "icon-512.png", "icon-maskable-512.png", "qr-app.png"];
@@ -11,7 +13,8 @@ self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Prom
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return; // never touch live API calls
-  e.respondWith(fetch(e.request).then(res => {
+  // A navigation request cannot be copied with new options, so ask again by URL.
+  e.respondWith(fetch(new Request(e.request.url, { cache: "no-cache", credentials: "same-origin" })).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
     return res;
   }).catch(() => caches.match(e.request, { ignoreSearch: true }).then(hit => hit || caches.match("index.html"))));

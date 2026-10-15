@@ -139,8 +139,9 @@ works: upload the `app` folder as is.
    best fit down. Pick **Lighthouses** to bring coastal trips to the top: every
    ocean, Gulf, and Great Lakes state has at least one lighthouse you can visit or
    see from shore (Alaska is the exception; see [docs/LIMITS.md](docs/LIMITS.md)).
-   Pick **Fishing** and every fishing trip shows a link to the state's official page
-   for buying a fishing license online, on the trip card, the itinerary, the booking
+   Pick **Fishing** and the Plan page shows the license link for the state you chose
+   right away; every fishing trip then shows a link to its state's official page for
+   buying a fishing license online, on the trip card, the itinerary, the booking
    checklist, and the saved itinerary.
 3. **One-tap itinerary:** tap a trip and the app drafts it, checks it, and fetches
    real drive times. Drive days fit your daily limit; sightseeing days are packed to

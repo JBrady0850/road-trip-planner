@@ -6,7 +6,7 @@
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.5.0";
+  const APP_VERSION = "0.5.1";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
   const ICONS = new Set(RT.INTERESTS.map(i => i[0]));
   const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" || k === "pin" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
@@ -124,6 +124,13 @@
   const fishingOn = () => st.profile.interests.includes("fishing");
   const fishLinks = states => [...new Set(states)].map(a => RT_STATE_BY_ABBR[a]).filter(s => s && s.fish).map(s => `<a href="${esc(s.fish)}" target="_blank" rel="noopener">${esc(s.name)} fishing license</a>`).join(" · ");
   const fishLine = states => { const l = fishingOn() ? fishLinks(states) : ""; return l ? `<p class="small fish-license">${icon("fishing")}<span>Buy online: ${l}</span></p>` : ""; };
+  // On the Plan page, as soon as Fishing is picked: the chosen state's license page, or
+  // where each trip shows its own.
+  const fishPlan = p => {
+    if (!p.interests.includes("fishing")) return "";
+    const links = p.destState ? fishLinks([p.destState]) : "";
+    return `<p class="small fish-license fish-plan">${icon("fishing")}<span>${links ? `Buy your fishing license online: ${links}. Every trip also links the license page for its own state.` : "Fishing license: every trip card, the itinerary, and the booking checklist link the official page to buy one online for the trip's state. Pick a state in Where to and its link shows here."}</span></p>`;
+  };
   const experiencesList = (list, cls = "") => list && list.length ? `<div class="exp ${cls}"><p class="exp-title">Only here</p><ul>${list.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
 
   // ---------- step bar ----------
@@ -146,7 +153,8 @@
 
   // ---------- interview ----------
   const chip = (act, k, label, on, extra = "") => `<button class="chip" data-act="${act}" data-k="${k}" aria-pressed="${on}" ${extra}>${icon(k)}${label}</button>`;
-  const interestChips = p => RT.INTEREST_GROUPS.map(([g, list]) => `<div class="chip-group"><h3 class="chip-head">${esc(g)}</h3><div class="chips">${list.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div></div>`).join("");
+  // The fishing license note sits right under the group that holds the Fishing chip.
+  const interestChips = p => RT.INTEREST_GROUPS.map(([g, list]) => `<div class="chip-group"><h3 class="chip-head">${esc(g)}</h3><div class="chips">${list.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div>${list.some(i => i[0] === "fishing") ? `<div id="fishPlan" aria-live="polite">${fishPlan(p)}</div>` : ""}</div>`).join("");
   // Where to: a state narrows the ranking; a town, when the traveler knows it, goes first.
   const cityOptions = state => [...new Set(RT_CATALOG.filter(d => !state || d.states.includes(state)).map(d => d.base[0]))].sort().map(c => `<option value="${esc(c)}"></option>`).join("");
   function whereTo(p, id) {
@@ -519,7 +527,7 @@
       try { home = await RT.services.reverse(pos.lat, pos.lon); } catch (e) { /* keep the coordinates; the town name is a nicety */ }
       setHome(home);
     },
-    interest: el => { const k = el.dataset.k, a = st.profile.interests; const i = a.indexOf(k); i >= 0 ? a.splice(i, 1) : a.push(k); el.setAttribute("aria-pressed", String(i < 0)); st.recs = []; if (st.tab === "destinations") render(); else persist(); },
+    interest: el => { const k = el.dataset.k, a = st.profile.interests; const i = a.indexOf(k); i >= 0 ? a.splice(i, 1) : a.push(k); el.setAttribute("aria-pressed", String(i < 0)); st.recs = []; if (st.tab === "destinations") render(); else { const box = $("#fishPlan"); if (box) box.innerHTML = fishPlan(st.profile); persist(); } },
     pace: el => { RT.applyPace(st.profile, el.dataset.k); st.details = true; st.recs = []; render(); toast(`${RT.PACE[el.dataset.k].label} pace set`); },
     comfort: el => { RT.applyComfort(st.profile, el.dataset.k, +st.nights); st.details = true; render(); toast(`${RT.COMFORT[el.dataset.k].label}: budget cap now ${money(st.profile.rules.budgetCap)}`); },
     toggleState: el => { const a = st.profile.visited, s = el.dataset.s, i = a.indexOf(s); i >= 0 ? a.splice(i, 1) : a.push(s); st.recs = []; render(); },

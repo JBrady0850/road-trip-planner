@@ -67,3 +67,17 @@ def test_no_license_links_without_fishing(page):
     draft(page, ["scenic", "parks"])
     page.click("#tabs [data-tab=trip]")
     assert page.locator(".fish-license").count() == 0
+
+
+def test_picking_fishing_on_the_plan_page_shows_the_license_right_away(page):
+    page.evaluate("RT.state.profile.interests = ['scenic']; RT.state.profile.destState = ''")
+    page.click("#tabs [data-tab=interview]")
+    assert page.locator("#fishPlan .fish-license").count() == 0, "nothing shows before Fishing is picked"
+    page.click("[data-act=interest][data-k=fishing]")
+    note = page.inner_text("#fishPlan").lower()
+    assert "fishing license" in note and "trip" in note, note
+    page.select_option("[data-bind='profile.destState']", "TN")
+    hrefs = page.eval_on_selector_all("#fishPlan a", "as => as.map(a => a.href)")
+    assert hrefs == [page.evaluate("RT_STATE_BY_ABBR.TN.fish")], hrefs
+    page.click("[data-act=interest][data-k=fishing]")
+    assert page.locator("#fishPlan .fish-license").count() == 0, "unpicking Fishing hides it"
