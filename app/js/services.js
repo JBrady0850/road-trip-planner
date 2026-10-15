@@ -23,6 +23,22 @@
     return res.map(x => ({ label: x.display_name, lat: +x.lat, lon: +x.lon, state: (x.address && (x.address.state || "")) || "" }));
   };
 
+  // Name the town at a point (used once after "Use my location"; nothing else leaves the device).
+  S.reverse = async (lat, lon) => {
+    await throttle();
+    const email = settings().contactEmail ? `&email=${encodeURIComponent(settings().contactEmail)}` : "";
+    const x = await getJSON(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&lat=${(+lat).toFixed(5)}&lon=${(+lon).toFixed(5)}${email}`);
+    const a = x.address || {};
+    const town = a.city || a.town || a.village || a.municipality || a.county || "";
+    const abbr = window.RT_STATE_BY_NAME && a.state && RT_STATE_BY_NAME[a.state.toLowerCase()];
+    return { label: [town, abbr ? abbr.abbr : a.state].filter(Boolean).join(", ") || x.display_name || "Your location", lat: +lat, lon: +lon, state: a.state || "" };
+  };
+  // The browser's own location (asks permission; nothing is sent anywhere).
+  S.myPosition = () => new Promise((ok, no) => {
+    if (!navigator.geolocation) { no(new Error("this browser cannot share its location")); return; }
+    navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lon: p.coords.longitude }), e => no(new Error(e.code === 1 ? "location permission was turned down" : "location is not available right now")), { timeout: 12000, maximumAge: 600000 });
+  });
+
   S.osrmBase = () => (settings().osrmUrl || "https://router.project-osrm.org").replace(/\/$/, "");
   S.routeDay = async (day) => {
     const pts = day.stops.filter(s => s.lat !== "" && s.lat != null && s.lon !== "" && s.lon != null);

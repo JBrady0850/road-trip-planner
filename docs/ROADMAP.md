@@ -13,4 +13,6 @@ Planned for later versions, in suggested order:
    GitHub Secrets.
 5. **Claude skill package:** the master prompt and engine packaged as a Claude skill
    so an assistant can run the interview, the checks, and the exports.
-6. More catalog destinations and community contributions (see CATALOG.md).
+6. More catalog destinations and community contributions (see CATALOG.md). The
+   thinnest entries were deepened in October 2026; six to eight stops per entry is
+   the target.

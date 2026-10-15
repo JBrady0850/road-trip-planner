@@ -6,7 +6,7 @@
   const INTERESTS = [["scenic","Scenic drives and views"],["parks","National and state parks"],["waterfalls","Waterfalls"],["beach","Beaches"],["fishing","Fishing"],["water","Kayak, boat, and water sports"],["history","History and museums"],["food","Food and local dining"],["lights","Holiday lights and festivals"],["hiking","Easy hikes"],["caves","Caves"],["town","Small towns and shopping"]];
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
-  const STEPS = ["Traveler","Trip","Interests","Driving","Lodging and dining","Budget and states","Review"];
+  const HINT_TRIP = "rtp:tripHint";
 
   // ---------- state ----------
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
@@ -14,7 +14,7 @@
   const st = RT.state = {
     profile: Object.assign(RT.defaultProfile(), saved.profile || {}),
     trip: saved.trip || null, routes: saved.routes || {}, weather: [], recs: [], findings: [],
-    step: 0, tab: saved.trip ? "trip" : "interview", startDate: saved.startDate || nextFriday(), nights: saved.nights || 4, month: null, busy: ""
+    tab: saved.trip ? "trip" : "interview", startDate: saved.startDate || nextFriday(), nights: saved.nights || 4, month: null, busy: "", details: false, open: new Set(), tripHint: false
   };
   ["rules","vehicle","lodging","dining","home"].forEach(k => st.profile[k] = Object.assign(RT.defaultProfile()[k], (saved.profile || {})[k] || {}));
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify({ profile: st.profile, trip: st.trip, routes: st.routes, startDate: st.startDate, nights: st.nights })); } catch (e) { /* storage blocked: keep working in memory */ } };
@@ -25,6 +25,7 @@
   const view = $("#view");
   const toast = msg => { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 3200); };
   const money = n => "$" + Math.round(n).toLocaleString();
+  const legText = sec => { const m = Math.round(sec / 60); return m < 90 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min`; };
   // Saving files works the same way everywhere: the desktop window opens a Save dialog,
   // iPad and iPhone open the share sheet (Save to Files), and every other browser downloads.
   const appleTouch = () => /iPad|iPhone|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -67,58 +68,51 @@
   }
 
   // ---------- interview ----------
+  const chip = (act, k, label, on, extra = "") => `<button class="chip" data-act="${act}" data-k="${k}" aria-pressed="${on}" ${extra}>${label}</button>`;
   function vInterview() {
-    const p = st.profile, s = st.step;
-    const steps = `<div class="steps">${STEPS.map((n, i) => `<span class="${i === s ? "on" : ""}">${i + 1}. ${n}</span>`).join("")}</div>`;
-    let body = "";
-    if (s === 0) body = `<h2>Who is traveling, and from where?</h2>
+    const p = st.profile, pace = p.rules.pace || "balanced", comfort = p.lodging.comfort || "mid";
+    const homeLine = p.home.lat != null ? `<p class="small ok">Starting from <b>${esc(p.home.label)}</b>. <button class="btn small ghost" data-act="homeClear">Change</button></p>` : `<p class="small muted">Your town sets the drive time to every destination.</p>`;
+    const home = p.home.lat != null ? homeLine : `<div class="row"><input type="text" id="homeQ" value="${esc(p.home.label)}" placeholder="Town or address, e.g. Knoxville, TN" aria-label="Home town or address"><button class="btn" data-act="homeSearch">Find</button><button class="btn ghost" data-act="locateMe">Use my location</button></div><div id="homeResults"></div>${homeLine}`;
+    const presetRow = (title, table, act, cur) => `<div class="field"><label>${title}</label><div class="chips">${Object.entries(table).map(([k, v]) => `<button class="chip preset" data-act="${act}" data-k="${k}" aria-pressed="${k === cur}"><b>${v.label}</b><span class="small">${v.blurb}</span></button>`).join("")}</div></div>`;
+    const details = `<details class="more" ${st.details ? "open" : ""} data-details="1"><summary>Adjust the details (optional)</summary>
+      <p class="small muted">Everything here is already filled in with sensible values. Change only what is different for you.</p>
+      ${presetRow("Pace", RT.PACE, "pace", pace)}
+      ${presetRow("Comfort and budget", RT.COMFORT, "comfort", comfort)}
+      <h3>Travelers</h3>
       <div class="row">${field("Your first name (optional)", `<input type="text" data-bind="profile.traveler" value="${esc(p.traveler)}">`)}
-      ${field("Travelers in the vehicle", num("profile.party", p.party, 'min="1" max="9"'))}</div>
-      ${field("Home city or address", `<div class="row"><input type="text" id="homeQ" value="${esc(p.home.label)}" placeholder="e.g. Knoxville, TN"><button class="btn" data-act="homeSearch">Find</button></div>`)}
-      <div id="homeResults"></div>
-      <p class="small muted">${p.home.lat != null ? `Home set: ${esc(p.home.label)} (${p.home.lat.toFixed(3)}, ${p.home.lon.toFixed(3)})` : "Home sets the starting point for every drive."}</p>`;
-    if (s === 1) body = `<h2>When and how long?</h2>
-      <div class="row">${field("Start date", `<input type="date" data-bind="startDate" value="${esc(st.startDate)}">`)}
-      ${field("Nights", num("nights", st.nights, `min="1" max="21"`))}</div>
-      <div class="row">${field("Shortest trip you like (nights)", num("profile.rules.nightsMin", p.rules.nightsMin, 'min="1"'))}
-      ${field("Longest trip you like (nights)", num("profile.rules.nightsMax", p.rules.nightsMax, 'min="1"'))}</div>
-      <label class="row"><input type="checkbox" data-bind="profile.flyOk" ${p.flyOk ? "checked" : ""}> Include fly-and-drive trips (Alaska, Hawaii)</label>`;
-    if (s === 2) body = `<h2>What do you enjoy?</h2><p class="muted">Pick as many as you like. Destinations are scored on these.</p>
-      <div class="chips">${INTERESTS.map(([k, l]) => `<button class="chip" data-act="interest" data-k="${k}" aria-pressed="${p.interests.includes(k)}">${l}</button>`).join("")}</div>
-      ${field("Longest walk you want on one stop (miles, round trip)", num("profile.rules.walkMiles", p.rules.walkMiles, 'min="0" step="0.5"'))}`;
-    if (s === 3) body = `<h2>Driving and vehicle</h2>
+      ${field("People in the vehicle", num("profile.party", p.party, 'min="1" max="9"'))}
+      ${field("Longest walk at one stop (miles)", num("profile.rules.walkMiles", p.rules.walkMiles, 'min="0" step="0.5"'))}</div>
+      <label class="row"><input type="checkbox" data-bind="profile.flyOk" ${p.flyOk ? "checked" : ""}> Include fly-and-drive trips (Alaska, Hawaii)</label>
+      <h3>Driving</h3>
       <div class="row">${field("Most driving hours per day", num("profile.rules.maxDriveHours", p.rules.maxDriveHours, 'min="1" max="14" step="0.5"'))}
-      ${field("Usual start time each morning", `<input type="time" data-bind="profile.rules.startTime" value="${esc(p.rules.startTime)}">`)}</div>
+      ${field("Usual start time", `<input type="time" data-bind="profile.rules.startTime" value="${esc(p.rules.startTime)}">`)}
+      ${field("Stops per day", num("profile.rules.stopsPerDay", p.rules.stopsPerDay, 'min="1" max="8"'))}</div>
       <div class="row">${field("Vehicle fuel economy (MPG)", num("profile.vehicle.mpg", p.vehicle.mpg, 'min="5" max="80"'))}
       ${field("Fuel price ($ per gallon)", num("profile.vehicle.fuelPrice", p.vehicle.fuelPrice, 'min="1" step="0.05"'))}
       ${field("Vehicle height in inches (0 to skip)", num("profile.vehicle.heightIn", p.vehicle.heightIn, 'min="0" max="200"'))}</div>
-      <label class="row"><input type="checkbox" data-bind="profile.rules.arriveBeforeSunset" ${p.rules.arriveBeforeSunset ? "checked" : ""}> Warn me when I would reach the hotel after sunset</label>`;
-    if (s === 4) body = `<h2>Lodging and dining</h2>
+      <label class="row"><input type="checkbox" data-bind="profile.rules.arriveBeforeSunset" ${p.rules.arriveBeforeSunset ? "checked" : ""}> Warn me when I would reach the hotel after sunset</label>
+      <h3>Lodging and dining</h3>
       <div class="row">${field("Hotel brand", `<select data-bind="profile.lodging.brand">${RT.BRANDS.map(b => `<option ${b === p.lodging.brand ? "selected" : ""}>${b}</option>`).join("")}</select>`)}
       ${field("Nightly rate, low ($)", num("profile.lodging.nightlyLow", p.lodging.nightlyLow, 'min="0"'))}
       ${field("Nightly rate, high ($)", num("profile.lodging.nightlyHigh", p.lodging.nightlyHigh, 'min="0"'))}</div>
       <div class="row">${field("Preferred check-in time", `<input type="time" data-bind="profile.rules.checkinTarget" value="${esc(p.rules.checkinTarget)}">`)}
-      ${field("Check-in tolerance (minutes)", num("profile.rules.checkinWindow", p.rules.checkinWindow, 'min="0"'))}</div>
-      <div class="row">${field("Diet", `<select data-bind="profile.dining.diet">${DIETS.map(d => `<option ${d === p.dining.diet ? "selected" : ""}>${d}</option>`).join("")}</select>`)}
-      ${field("Upscale dinners per trip", num("profile.dining.upscaleDinners", p.dining.upscaleDinners, 'min="0"'))}
+      ${field("Check-in tolerance (minutes)", num("profile.rules.checkinWindow", p.rules.checkinWindow, 'min="0"'))}
+      ${field("Diet", `<select data-bind="profile.dining.diet">${DIETS.map(d => `<option ${d === p.dining.diet ? "selected" : ""}>${d}</option>`).join("")}</select>`)}</div>
+      <div class="row">${field("Upscale dinners per trip", num("profile.dining.upscaleDinners", p.dining.upscaleDinners, 'min="0"'))}
       ${field("Lunch limit ($)", num("profile.dining.lunchCap", p.dining.lunchCap, 'min="0"'))}
-      ${field("Food per day ($)", num("profile.dining.foodPerDay", p.dining.foodPerDay, 'min="0"'))}</div>`;
-    if (s === 5) body = `<h2>Budget and states already visited</h2>
-      ${field("Trip budget cap, all-in ($)", num("profile.rules.budgetCap", p.rules.budgetCap, 'min="0" step="50"'))}
-      <p class="muted">Tap the states you have already visited. New states score higher.</p>${statesGrid(true)}`;
-    if (s === 6) body = `<h2>Review</h2><div class="tablewrap"><table>
-      <tr><th>Home</th><td>${esc(p.home.label || "not set")}</td></tr>
-      <tr><th>Dates</th><td>${U.dayLabel(st.startDate)}, ${st.nights} nights</td></tr>
-      <tr><th>Interests</th><td>${p.interests.map(k => INTERESTS.find(i => i[0] === k)?.[1] || k).join(", ") || "none"}</td></tr>
-      <tr><th>Driving</th><td>${p.rules.maxDriveHours} h/day max, ${p.vehicle.mpg} MPG, start ${U.hm12(p.rules.startTime)}</td></tr>
-      <tr><th>Lodging</th><td>${esc(p.lodging.brand)}, ${money(p.lodging.nightlyLow)} to ${money(p.lodging.nightlyHigh)}/night, check-in near ${U.hm12(p.rules.checkinTarget)}</td></tr>
-      <tr><th>Dining</th><td>${esc(p.dining.diet)}; ${p.dining.upscaleDinners} upscale dinner(s); lunch under ${money(p.dining.lunchCap)}</td></tr>
-      <tr><th>Budget</th><td>${money(p.rules.budgetCap)} cap</td></tr>
-      <tr><th>States visited</th><td>${p.visited.length} of 50</td></tr></table></div>
-      ${p.home.lat == null ? `<p class="lvl WARN">Set your home on step 1 so drive times can be estimated.</p>` : ""}`;
-    const nav = `<div class="row noprint" style="margin-top:12px">${s > 0 ? `<button class="btn ghost" data-act="stepBack">Back</button>` : ""}
-      ${s < STEPS.length - 1 ? `<button class="btn" data-act="stepNext">Next</button>` : `<button class="btn" data-act="findDest">Find destinations</button>`}</div>`;
-    return `<h1>Plan a road trip</h1><div class="card">${steps}${body}${nav}</div>`;
+      ${field("Food per day ($)", num("profile.dining.foodPerDay", p.dining.foodPerDay, 'min="0"'))}
+      ${field("Trip budget cap, all-in ($)", num("profile.rules.budgetCap", p.rules.budgetCap, 'min="0" step="50"'))}</div>
+    </details>`;
+    return `<h1>Plan a road trip</h1><div class="card">
+      <h2>Where are you starting from?</h2>${home}
+      <h2>When, and for how long?</h2>
+      <div class="row">${field("Leaving on", `<input type="date" data-bind="startDate" value="${esc(st.startDate)}">`)}
+      ${field("Nights away", num("nights", st.nights, 'min="1" max="21"'))}
+      ${field("Where to", `<select data-bind="profile.destState" data-rescore="1"><option value="">Anywhere within reach</option>${RT_STATES.map(s => `<option value="${s.abbr}" ${p.destState === s.abbr ? "selected" : ""}>${s.name}</option>`).join("")}</select>`)}</div>
+      <h2>What do you enjoy?</h2><p class="small muted">Three are picked already. Tap to change; more picks sharpen the ranking.</p>
+      <div class="chips">${INTERESTS.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div>
+      <div class="row" style="margin:14px 0 6px"><button class="btn big" data-act="findDest">Show me trips</button><span class="small muted">Ranked for your interests, the season, and the drive from home.</span></div>
+      ${details}</div>`;
   }
 
   function statesGrid(editable) {
@@ -128,45 +122,35 @@
 
   // ---------- destinations ----------
   function vDestinations() {
-    if (!st.recs.length) st.recs = RT.scoreDestinations(st.profile, RT_CATALOG, st.month || +st.startDate.slice(5, 7));
-    const ai = !!st.profile.aiKey;
-    return `<h1>Recommended destinations</h1>
-      <p class="muted">Ranked for ${U.dayLabel(st.startDate)} from your interests, the season, new states, and estimated drive time. Drive times here are straight-line estimates; the Trip tab checks routed times.</p>
-      <div class="row noprint" style="margin-bottom:10px">${field("Month to score for", `<select data-bind="month" data-rescore="1"><option value="">Trip month</option>${MONTHS.map((m, i) => `<option value="${i + 1}" ${st.month == i + 1 ? "selected" : ""}>${m}</option>`).join("")}</select>`)}
-      ${ai ? `<button class="btn ghost" data-act="aiOpen">Ask AI for a custom trip</button>` : `<span class="small muted">Add an Anthropic API key in Settings for AI-written itineraries.</span>`}</div>
-      <div class="grid">${st.recs.slice(0, 12).map((r, i) => `<div class="card">
-        <div class="row" style="justify-content:space-between"><strong>${esc(r.dest.name)}</strong><span class="score">${r.score}</span></div>
-        <div class="small muted">${r.dest.states.join(", ")} | best ${r.dest.months.map(m => MONTHS[m - 1]).join(" ")}</div>
+    const p = st.profile, state = p.destState || "";
+    if (!st.recs.length) st.recs = RT.scoreDestinations(p, RT_CATALOG, st.month || +st.startDate.slice(5, 7), +st.nights, state);
+    const ai = !!p.aiKey, stName = state ? (RT_STATE_BY_ABBR[state] || {}).name || state : "";
+    const shown = state ? st.recs : st.recs.slice(0, 12);
+    const card = (r, i) => `<div class="card dest ${i === 0 ? "best" : ""}" data-act="build" data-i="${i}" role="button" tabindex="0" aria-label="Build ${esc(r.dest.name)}">
+        <div class="row" style="justify-content:space-between"><span class="rank">#${r.rank}</span><span class="fit ${r.label.replace(/\s.*/, "")}">${i === 0 ? "Best match · " : ""}${r.label}</span></div>
+        <strong>${esc(r.dest.name)}</strong>
+        <div class="small muted">Stay in <b>${esc(r.city)}</b> · ${r.dest.states.join(", ")} · best ${r.dest.months.map(m => MONTHS[m - 1]).join(" ")}</div>
         <ul class="small">${r.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-        <div class="small">${r.dest.stops.map(s => esc(s[0])).join(" · ")}</div>
-        <div class="row" style="margin-top:8px"><button class="btn small" data-act="build" data-i="${i}">Build itinerary</button>${ai ? `<button class="btn small ghost" data-act="buildAI" data-i="${i}">Build with AI</button>` : ""}</div></div>`).join("")}</div>`;
+        <div class="small"><span class="muted">Places, best matches first:</span> ${r.stopsRanked.map(s => s.hits ? `<b>${esc(s.name)}</b>` : esc(s.name)).join(" · ")}</div>
+        <div class="row" style="margin-top:8px"><button class="btn small" data-act="build" data-i="${i}">Build this trip</button>${ai ? `<button class="btn small ghost" data-act="buildAI" data-i="${i}">Build with AI</button>` : ""}</div></div>`;
+    return `<h1>${state ? `${esc(stName)}: cities ranked for you` : "Recommended trips"}</h1>
+      <p class="muted">${state ? `Every catalog trip that includes ${esc(stName)}, ranked by your interests, the season, and the drive from home. #1 is the best fit. A trip that crosses the state line may stay in a neighboring state.` : "Ranked for your interests, the season, new states, and the drive from home. Tap a trip to build it."} <button class="btn small ghost" data-act="startOver">Change my answers</button></p>
+      <div class="row noprint" style="margin-bottom:10px">${field("Where to", `<select data-bind="profile.destState" data-rescore="1"><option value="">Anywhere within reach</option>${RT_STATES.map(s => `<option value="${s.abbr}" ${state === s.abbr ? "selected" : ""}>${s.name}</option>`).join("")}</select>`)}
+      ${field("Month to rank for", `<select data-bind="month" data-rescore="1"><option value="">Trip month</option>${MONTHS.map((m, i) => `<option value="${i + 1}" ${st.month == i + 1 ? "selected" : ""}>${m}</option>`).join("")}</select>`)}
+      ${ai ? `<button class="btn ghost" data-act="aiOpen">Ask AI for a custom trip</button>` : ""}</div>
+      <details class="more"><summary>Your interests and states visited</summary>
+        <p class="small muted">Tap to change. New states rank higher.</p>
+        <div class="chips" style="margin-bottom:10px">${INTERESTS.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div>
+        ${statesGrid(true)}</details>
+      ${shown.length ? `<div class="grid">${shown.map(card).join("")}</div>` : `<div class="card"><p>No catalog city in ${esc(stName)} yet. Pick "Anywhere within reach", or add one (see docs/CATALOG.md in the project).</p></div>`}
+      ${!ai ? `<p class="small muted">Optional: add your own Anthropic API key in Settings for AI-written itineraries.</p>` : ""}`;
   }
 
   // ---------- trip editor ----------
-  function vTrip() {
-    const t = st.trip;
-    if (!t) return `<h1>Trip</h1><div class="card"><p>No trip yet. Finish the interview and pick a destination, or load a saved trip file.</p><div class="row"><button class="btn" data-act="go" data-t="interview">Start the interview</button><label class="btn ghost">Load trip file<input type="file" accept=".json,application/json" data-act="loadTrip" hidden></label></div></div>`;
-    const f = st.findings, errs = f.filter(x => x.level === "ERROR").length, warns = f.filter(x => x.level === "WARN").length;
-    let n = 0;
-    return `<h1>${esc(t.name)}</h1>
-      <div class="card noprint"><div class="row">
-        <button class="btn" data-act="check">Check plan</button>
-        <button class="btn ghost" data-act="routeAll">Route check (live drive times)</button>
-        <button class="btn ghost" data-act="retime" ${Object.keys(st.routes).length ? "" : "disabled"}>Re-time from routes</button>
-        <button class="btn ghost" data-act="saveTrip">Save trip file</button>
-        <label class="btn ghost">Load trip file<input type="file" accept=".json,application/json" data-act="loadTrip" hidden></label>
-        <button class="btn ghost" data-act="itinerary">Download itinerary</button>
-        <button class="btn ghost" data-act="print">Print</button>
-        <button class="btn warn" data-act="clearTrip">Clear trip</button></div>
-        ${st.busy ? `<p class="muted">${esc(st.busy)}</p>` : ""}
-        ${f.length ? `<h3>Plan check: ${errs} error(s), ${warns} warning(s)</h3>${f.map(x => `<div class="finding ${x.level}"><span class="lvl ${x.level}">${x.level}</span>${esc(x.day)} | ${esc(x.check)}: ${esc(x.msg)}</div>`).join("")}` : `<p class="small muted">Run Check plan after every change. Route check calls the free OSRM router for real drive times.</p>`}
-      </div>
-      ${t.days.map((d, di) => { const r = st.routes[d.date]; return `<div class="card">
-        <div class="row" style="justify-content:space-between"><h2 style="margin:0">Day ${di + 1} | ${U.dayLabel(d.date)}</h2>
-        ${r ? `<span class="small muted">${Math.round(r.legs.reduce((a, l) => a + l.meters, 0) / 1609.344)} mi, ${(r.legs.reduce((a, l) => a + l.seconds, 0) / 3600).toFixed(1)} h routed</span>` : ""}</div>
-        <input type="text" data-tripbind="days.${di}.title" value="${esc(d.title)}" aria-label="Day title">
-        ${d.stops.map((s, si) => { const shown = !(di > 0 && si === 0); if (shown) n++; return `<div class="stop"><div class="num">${shown ? n : "↺"}</div><div>
-          <div class="edit">
+  const stopLine = (s, di, si, n, shown, leg) => {
+    const k = `${di}-${si}`, open = st.open.has(k);
+    const when = s.arrive && s.depart ? `${U.hm12(s.arrive)} to ${U.hm12(s.depart)}` : s.arrive ? `arrive ${U.hm12(s.arrive)}` : s.depart ? `leave ${U.hm12(s.depart)}` : "";
+    const editor = `<div class="edit">
             <input class="wide" type="text" data-tripbind="days.${di}.stops.${si}.name" value="${esc(s.name)}" aria-label="Stop name">
             <input class="wide" type="text" data-tripbind="days.${di}.stops.${si}.address" value="${esc(s.address)}" aria-label="Address">
             ${field("Arrive", `<input type="time" data-tripbind="days.${di}.stops.${si}.arrive" value="${esc(s.arrive)}">`)}
@@ -179,8 +163,44 @@
             <button class="btn small ghost" data-act="locate" data-d="${di}" data-s="${si}">Find location</button>
             <button class="btn small ghost" data-act="up" data-d="${di}" data-s="${si}" aria-label="Move up">↑</button>
             <button class="btn small ghost" data-act="down" data-d="${di}" data-s="${si}" aria-label="Move down">↓</button>
-            <button class="btn small warn" data-act="del" data-d="${di}" data-s="${si}">Remove</button></div>
-          ${s.notes ? `<div class="small muted">${esc(s.notes)}</div>` : ""}<div id="loc-${di}-${si}"></div></div></div>`; }).join("")}
+            <button class="btn small warn" data-act="del" data-d="${di}" data-s="${si}">Remove</button></div><div id="loc-${di}-${si}"></div>`;
+    return `<div class="stop ${open ? "open" : ""}"><div class="num">${shown ? n : "↺"}</div><div>
+          <div class="row line"><div class="grow"><b>${esc(s.name)}</b>${s.checkin ? ` <span class="tag">check-in</span>` : ""}${s.timed_entry ? ` <span class="tag">entry ${U.hm12(s.timed_entry)}</span>` : ""}<span class="small muted"> ${when}</span>
+            <div class="small muted">${esc(s.address)}${leg ? ` · ${leg} drive from the last stop` : ""}</div></div>
+            <button class="btn small ghost" data-act="toggleStop" data-d="${di}" data-s="${si}" aria-expanded="${open}">${open ? "Done" : "Edit"}</button></div>
+          ${s.notes ? `<div class="small note">${esc(s.notes)}</div>` : ""}
+          ${open ? editor : ""}</div></div>`;
+  };
+  function vTrip() {
+    const t = st.trip;
+    if (!t) return `<h1>Trip</h1><div class="card"><p>No trip yet. Answer three questions and pick a destination, or open a saved trip file.</p><div class="row"><button class="btn" data-act="go" data-t="interview">Plan a trip</button><label class="btn ghost">Load trip file<input type="file" accept=".json,application/json" data-act="loadTrip" hidden></label></div></div>`;
+    const f = st.findings, errs = f.filter(x => x.level === "ERROR").length, warns = f.filter(x => x.level === "WARN").length;
+    const routed = t.days.filter(d => st.routes[d.date]).length;
+    const near = t.base ? RT.nearbyDestinations(t, RT_CATALOG, st.profile).slice(0, 6) : [];
+    const hasFree = t.days.some(RT.isFreeDay);
+    let n = 0;
+    const status = st.busy ? `<p class="muted">${esc(st.busy)}</p>` : `<p class="small ${errs ? "lvl ERROR" : warns ? "lvl WARN" : "ok"}">${errs ? `${errs} problem${errs > 1 ? "s" : ""} to fix` : warns ? `${warns} thing${warns > 1 ? "s" : ""} to look at` : "Plan checks out"}${routed ? `; drive times checked for ${routed} of ${t.days.length} days` : "; drive times are estimates (Tools, Check drive times)"}.</p>`;
+    return `<h1>${esc(t.name)}</h1>
+      ${st.tripHint ? `<div class="hint noprint"><div><b>Your trip is drafted and checked.</b> Tap <b>Edit</b> on any stop to change it, or add stops with the search box under each day. When you are ready: <b>Navigate</b> gives you the driving links, <b>Weather &amp; Roads</b> the forecast, and <b>Budget &amp; Booking</b> the costs and what to reserve.</div><button class="btn ghost small" data-act="hideTripHint">Got it</button></div>` : ""}
+      <div class="card noprint"><div class="row">
+        <button class="btn" data-act="saveTrip">Save trip file</button>
+        <button class="btn ghost" data-act="itinerary">Download itinerary</button>
+        <label class="btn ghost">Load trip file<input type="file" accept=".json,application/json" data-act="loadTrip" hidden></label>
+        <details class="more inline"><summary>Tools</summary><div class="row" style="margin-top:8px">
+          <button class="btn small ghost" data-act="check">Check plan</button>
+          <button class="btn small ghost" data-act="routeAll">Check drive times</button>
+          <button class="btn small ghost" data-act="retime" ${Object.keys(st.routes).length ? "" : "disabled"}>Re-time from drive times</button>
+          <button class="btn small ghost" data-act="print">Print</button>
+          <button class="btn small warn" data-act="clearTrip">Clear trip</button></div></details></div>
+        ${status}
+        ${f.length ? f.map(x => `<div class="finding ${x.level}"><span class="lvl ${x.level}">${x.level}</span>${esc(x.day)} | ${esc(x.check)}: ${esc(x.msg)}</div>`).join("") : ""}
+      </div>
+      ${hasFree && near.length ? `<div class="card noprint"><h2 style="margin-top:0">Free days: add a day trip</h2><p class="small muted">Within reach of ${esc(t.base.addr)}. Tap one to fill your free days with its best stops.</p><div class="chips">${near.map(x => `<button class="chip" data-act="addDest" data-id="${x.dest.id}">${esc(x.dest.name)} <span class="small muted">(${x.hours < 1 ? "under an hour" : `about ${Math.round(x.hours)} h`} away)</span></button>`).join("")}</div></div>` : ""}
+      ${t.days.map((d, di) => { const r = st.routes[d.date]; return `<div class="card">
+        <div class="row" style="justify-content:space-between"><h2 style="margin:0">Day ${di + 1} | ${U.dayLabel(d.date)}</h2>
+        ${r ? `<span class="small muted">${Math.round(r.legs.reduce((a, l) => a + l.meters, 0) / 1609.344)} mi, ${(r.legs.reduce((a, l) => a + l.seconds, 0) / 3600).toFixed(1)} h of driving</span>` : ""}</div>
+        <input type="text" data-tripbind="days.${di}.title" value="${esc(d.title)}" aria-label="Day title">
+        ${d.stops.map((s, si) => { const shown = !(di > 0 && si === 0); if (shown) n++; const leg = r && si > 0 && r.legs[si - 1] ? legText(r.legs[si - 1].seconds) : ""; return stopLine(s, di, si, n, shown, leg); }).join("")}
         <div class="row noprint" style="margin-top:8px"><input type="text" id="add-${di}" placeholder="Add a stop: place name or address"><button class="btn small" data-act="addStop" data-d="${di}">Search</button></div><div id="addres-${di}"></div>
       </div>`; }).join("")}
       <div class="row noprint"><button class="btn ghost" data-act="addDay">Add a day</button></div>`;
@@ -277,16 +297,45 @@
   function stampTZ(trip) { trip.days.forEach(d => { if (!d.tz) { const s = d.stops.find(x => x.lat != null && x.lat !== ""); if (s) d.tz = guessTZ(+s.lat, +s.lon); } }); }
 
   function runCheck() { if (!st.trip) return; stampTZ(st.trip); st.findings = RT.checkTrip(st.trip, st.profile, st.routes); }
+  function setHome(h) { st.profile.home = h; st.recs = []; toast(`Starting from ${h.label}`); render(); }
+  // After a draft: routed drive times, then re-timed stops, in one pass. Fails soft offline.
+  async function routeAndRetime() {
+    const t = st.trip; if (!t) return;
+    let ok = 0, skip = 0;
+    for (const d of t.days) { st.busy = `Checking drive times for ${U.dayLabel(d.date)}…`; render(); try { st.routes[d.date] = await RT.services.routeDay(d); ok++; } catch (e) { skip++; } }
+    if (ok) t.days.forEach(d => RT.retimeDay(d, st.routes[d.date]));
+    st.busy = ""; runCheck(); render();
+    toast(ok ? `Drive times checked for ${ok} day(s)${skip ? `; ${skip} skipped (a stop without a location, or offline)` : ""}` : "Could not reach the routing service; times are estimates for now");
+  }
 
   const actions = {
     go: el => setTab(el.dataset.t),
-    stepNext: () => { st.step = Math.min(STEPS.length - 1, st.step + 1); render(); },
-    stepBack: () => { st.step = Math.max(0, st.step - 1); render(); },
-    homeSearch: () => searchInto($("#homeQ").value, "#homeResults", r => { st.profile.home = { label: r.label.split(",").slice(0, 3).join(","), lat: r.lat, lon: r.lon, state: r.state }; toast("Home set"); render(); }),
-    interest: el => { const k = el.dataset.k, a = st.profile.interests; const i = a.indexOf(k); i >= 0 ? a.splice(i, 1) : a.push(k); el.setAttribute("aria-pressed", String(i < 0)); persist(); },
-    toggleState: el => { const a = st.profile.visited, s = el.dataset.s, i = a.indexOf(s); i >= 0 ? a.splice(i, 1) : a.push(s); render(); },
-    findDest: () => { if (st.profile.home.lat == null) { toast("Set your home first (step 1)"); st.step = 0; render(); return; } st.recs = []; setTab("destinations"); },
-    build: el => { const r = st.recs[+el.dataset.i]; st.trip = RT.draftTrip(st.profile, r.dest, st.startDate, +st.nights); st.routes = {}; st.weather = []; runCheck(); toast("Draft built. Review times and run Route check."); setTab("trip"); },
+    homeSearch: () => searchInto($("#homeQ").value, "#homeResults", r => { const ab = r.state && RT_STATE_BY_NAME[r.state.toLowerCase()]; setHome({ label: [r.label.split(",")[0].trim(), ab ? ab.abbr : r.state].filter(Boolean).join(", "), lat: r.lat, lon: r.lon, state: r.state }); }),
+    homeClear: () => { st.profile.home = { label: "", lat: null, lon: null, state: "" }; st.recs = []; render(); },
+    locateMe: async () => {
+      toast("Asking this device for its location…");
+      let pos; try { pos = await RT.services.myPosition(); } catch (e) { toast(`Could not get a location: ${e.message}. Type your town instead.`); return; }
+      let home = { label: `Near ${pos.lat.toFixed(2)}, ${pos.lon.toFixed(2)}`, lat: pos.lat, lon: pos.lon, state: "" };
+      try { home = await RT.services.reverse(pos.lat, pos.lon); } catch (e) { /* keep the coordinates; the town name is a nicety */ }
+      setHome(home);
+    },
+    interest: el => { const k = el.dataset.k, a = st.profile.interests; const i = a.indexOf(k); i >= 0 ? a.splice(i, 1) : a.push(k); el.setAttribute("aria-pressed", String(i < 0)); st.recs = []; if (st.tab === "destinations") render(); else persist(); },
+    pace: el => { RT.applyPace(st.profile, el.dataset.k); st.details = true; st.recs = []; render(); toast(`${RT.PACE[el.dataset.k].label} pace set`); },
+    comfort: el => { RT.applyComfort(st.profile, el.dataset.k, +st.nights); st.details = true; render(); toast(`${RT.COMFORT[el.dataset.k].label}: budget cap now ${money(st.profile.rules.budgetCap)}`); },
+    toggleState: el => { const a = st.profile.visited, s = el.dataset.s, i = a.indexOf(s); i >= 0 ? a.splice(i, 1) : a.push(s); st.recs = []; render(); },
+    findDest: () => { if (st.profile.home.lat == null) { toast("Tell the app where you start: type your town or tap Use my location"); const q = $("#homeQ"); if (q) q.focus(); return; } st.recs = []; setTab("destinations"); },
+    startOver: () => { st.recs = []; setTab("interview"); },
+    build: async el => {
+      const r = st.recs[+el.dataset.i]; if (!r) return;
+      st.trip = RT.draftTrip(st.profile, r.dest, st.startDate, +st.nights, RT_CATALOG); st.routes = {}; st.weather = []; st.open = new Set();
+      let hide = false; try { hide = localStorage.getItem(HINT_TRIP) === "hide"; } catch (e) { }
+      st.tripHint = !hide;
+      runCheck(); setTab("trip");
+      await routeAndRetime();
+    },
+    addDest: el => { const near = RT.nearbyDestinations(st.trip, RT_CATALOG, st.profile).find(n => n.dest.id === el.dataset.id); const n = RT.fillFreeDays(st.trip, st.profile, near); if (!n) { toast("No free day left to fill"); return; } st.trip.days.forEach(d => { if (d.title.startsWith("Day trip")) delete st.routes[d.date]; }); runCheck(); render(); toast(`Added ${n} day trip${n > 1 ? "s" : ""} to ${near.dest.name}`); },
+    toggleStop: el => { const k = `${el.dataset.d}-${el.dataset.s}`; st.open.has(k) ? st.open.delete(k) : st.open.add(k); render(); },
+    hideTripHint: () => { st.tripHint = false; try { localStorage.setItem(HINT_TRIP, "hide"); } catch (e) { } render(); },
     buildAI: async el => { const r = st.recs[+el.dataset.i]; await aiBuild(r.dest); },
     aiOpen: async () => { const notes = prompt("Describe the trip you want (places, pace, must-sees):") || ""; await aiBuild(null, notes); },
     check: () => { runCheck(); render(); },
@@ -383,11 +432,12 @@
   view.addEventListener("click", e => { const el = e.target.closest("[data-act]"); if (el && el.tagName !== "INPUT" && actions[el.dataset.act]) { e.preventDefault(); actions[el.dataset.act](el); } });
   view.addEventListener("change", e => {
     const el = e.target;
-    if (el.dataset.bind) { let v = el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value === "" ? 0 : +el.value) : el.value; if (el.dataset.bind === "month") v = v ? +v : null; setPath(el.dataset.bind, v); if (el.dataset.rescore || el.dataset.bind === "startDate") st.recs = []; if (el.dataset.rescore) render(); else persist(); }
+    if (el.dataset.bind) { let v = el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value === "" ? 0 : +el.value) : el.value; if (el.dataset.bind === "month") v = v ? +v : null; setPath(el.dataset.bind, v); if (el.dataset.rescore || el.dataset.bind === "startDate" || el.dataset.bind === "nights") st.recs = []; if (el.dataset.rescore) render(); else persist(); }
     if (el.dataset.tripbind) { const ks = el.dataset.tripbind.split("."); const last = ks.pop(); const o = ks.reduce((x, k) => x[k], st.trip); o[last] = el.type === "checkbox" ? el.checked : el.value; if (ks[0] === "days") delete st.routes[st.trip.days[+ks[1]].date]; persist(); }
     if (el.dataset.act === "loadTrip" || el.dataset.act === "restore") readFile(el);
   });
-  view.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "homeQ") actions.homeSearch(); if (e.key === "Enter" && /^add-/.test(e.target.id)) actions.addStop({ dataset: { d: e.target.id.slice(4) } }); });
+  view.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "homeQ") actions.homeSearch(); if (e.key === "Enter" && /^add-/.test(e.target.id)) actions.addStop({ dataset: { d: e.target.id.slice(4) } }); if ((e.key === "Enter" || e.key === " ") && e.target.matches(".dest[data-act=build]")) { e.preventDefault(); actions.build(e.target); } });
+  view.addEventListener("toggle", e => { if (e.target.dataset && e.target.dataset.details) st.details = e.target.open; }, true);
   // Trip files written for the command-line version keep days beside the trip and use snake_case rules.
   function fromCommandLine(j) {
     const map = { max_drive_hours: "maxDriveHours", checkin_target: "checkinTarget", checkin_window_minutes: "checkinWindow", ticket_margin_minutes: "ticketMargin", arrive_before_sunset: "arriveBeforeSunset" };

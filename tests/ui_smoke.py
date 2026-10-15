@@ -4,6 +4,7 @@ Run: python tests/ui_smoke.py [screenshot_dir]
 Needs: pip install playwright && playwright install chromium
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -53,33 +54,58 @@ def main():
             page.reload()
 
             # interview
+            # quick start: the button refuses politely until home is set
+            page.click("[data-act=findDest]")
+            assert page.locator("h1").inner_text() == "Plan a road trip", "no home yet, so stay on the interview"
             page.fill("#homeQ", "Knoxville, TN")
             page.click("[data-act=homeSearch]")
             page.click("#homeResults [data-pick='0']")
-            page.wait_for_selector("text=Home set:")
-            for _ in range(2):
-                page.click("[data-act=stepNext]")
+            page.wait_for_selector("text=Starting from")
+            assert page.locator("[data-act=interest][aria-pressed=true]").count() == 3, "three interests are preselected"
             page.click("[data-act=interest][data-k=waterfalls]")
             page.click("[data-act=interest][data-k=hiking]")
-            for _ in range(3):
-                page.click("[data-act=stepNext]")
-            page.click("[data-act=toggleState][data-s=TN]")
-            page.click("[data-act=stepNext]")
-            page.wait_for_selector("text=Review")
-            if SHOTS: page.screenshot(path=str(SHOTS / f"{name}-1-review.png"), full_page=True)
+            # the optional details: presets fill the numbers
+            page.click("summary:has-text('Adjust the details')")
+            page.click("[data-act=pace][data-k=relaxed]")
+            assert page.input_value("[data-bind='profile.rules.maxDriveHours']") == "5"
+            page.click("[data-act=pace][data-k=balanced]")
+            page.click("[data-act=comfort][data-k=comfort]")
+            assert int(page.input_value("[data-bind='profile.rules.budgetCap']")) > 1500
+            page.click("[data-act=comfort][data-k=mid]")
+            if SHOTS: page.screenshot(path=str(SHOTS / f"{name}-1-interview.png"), full_page=True)
             page.click("[data-act=findDest]")
-            page.wait_for_selector("text=Recommended destinations")
+            page.wait_for_selector("text=Recommended trips")
+            assert "Best match" in page.inner_text(".grid .card.best")
+            page.click("summary:has-text('states visited')")
+            page.click("[data-act=toggleState][data-s=TN]")
+            page.wait_for_selector("text=Recommended trips")
+            # a destination state lists that state's cities, ranked
+            page.select_option("select[data-bind='profile.destState']", "NC")
+            page.wait_for_selector("h1:has-text('North Carolina')")
+            ranks = page.locator(".grid .card .rank").all_inner_texts()
+            assert ranks == [f"#{i + 1}" for i in range(len(ranks))] and len(ranks) >= 2, ranks
+            assert page.locator(".grid .card:has-text('Stay in')").count() == len(ranks)
+            page.select_option("select[data-bind='profile.destState']", "")
+            page.wait_for_selector("text=Recommended trips")
             if SHOTS: page.screenshot(path=str(SHOTS / f"{name}-2-destinations.png"), full_page=True)
             first = page.inner_text(".grid .card strong")
 
-            # build and check
-            page.click("[data-act=build][data-i='0']")
-            page.wait_for_selector("[data-act=routeAll]")
+            # one tap builds, checks and routes
+            page.click(".grid .card.best")
+            page.wait_for_selector("text=drive times checked for", timeout=15000)
+            assert page.locator(".hint").count() == 1, "first draft shows the what-next hint"
+            page.click("[data-act=hideTripHint]")
+            assert page.locator("[data-act=toggleStop]").count() >= 5
+            assert page.locator("input[data-tripbind$='.name']").count() == 0, "stop editors start collapsed"
+            page.click("[data-act=toggleStop][data-d='0'][data-s='1']")
+            assert page.locator("input[data-tripbind='days.0.stops.1.name']").count() == 1
+            page.click("summary:has-text('Tools')")
             page.click("[data-act=routeAll]")
-            page.wait_for_selector("text=routed", timeout=15000)
+            page.wait_for_selector("text=drive times checked for", timeout=15000)
+            page.click("summary:has-text('Tools')")
             page.click("[data-act=retime]")
             travel_errors = page.locator(".finding.ERROR:has-text('travel')").count()
-            day_count = page.locator("h2:has-text('Day ')").count()
+            day_count = page.locator("h2").filter(has_text=re.compile(r"^Day \d")).count()
             print(f"[{name}] days {day_count}, travel errors after re-time {travel_errors}")
             assert travel_errors == 0, "re-time should clear travel errors"
             assert day_count == 5, "4 nights should give 5 days"
@@ -128,6 +154,7 @@ def main():
             page.route("https://api.anthropic.com/**", anthropic)
             page.evaluate("RT.state.profile.aiKey = 'test-key-not-real'")
             page.click("#tabs [data-tab=destinations]")
+            page.wait_for_selector("[data-act=buildAI][data-i='0']")
             page.click("[data-act=buildAI][data-i='0']")
             page.wait_for_selector("h1:has-text('AI Sample Trip')")
             assert seen["headers"].get("x-api-key") == "test-key-not-real"
@@ -135,6 +162,32 @@ def main():
             assert "Plan a" in seen["body"]["messages"][0]["content"]
             print(f"[{name}] AI path ok: model {seen['body']['model']}")
             page.evaluate("RT.state.profile.aiKey = ''")
+
+            # free days fill from a nearby destination
+            page.click("#tabs [data-tab=interview]")
+            page.fill("[data-bind=nights]", "7")
+            page.dispatch_event("[data-bind=nights]", "change")
+            page.click("[data-act=findDest]")
+            page.wait_for_selector("text=Recommended trips")
+            page.click(".grid .card.best")
+            page.wait_for_selector("text=drive times checked for", timeout=15000)
+            free_before = page.locator("input[data-tripbind$='.title'][value^='Free day']").count()
+            assert free_before >= 1, "a week at a five-stop destination leaves free days"
+            page.click("[data-act=addDest] >> nth=0")
+            page.wait_for_selector("text=Added")
+            assert page.locator("input[data-tripbind$='.title'][value^='Day trip']").count() >= 1
+            print(f"[{name}] {free_before} free day(s) offered a day trip; filled")
+
+            # "Use my location": the browser's position, named through one reverse lookup
+            page.click("#tabs [data-tab=interview]")
+            page.click("[data-act=homeClear]")
+            ctx.grant_permissions(["geolocation"])
+            ctx.set_geolocation({"latitude": 35.9606, "longitude": -83.9207})
+            page.route("https://nominatim.openstreetmap.org/reverse**", lambda r: r.fulfill(json={"address": {"city": "Knoxville", "state": "Tennessee"}}, headers={"Access-Control-Allow-Origin": "*"}))
+            page.click("[data-act=locateMe]")
+            page.wait_for_selector("main .ok:has-text('Starting from')")
+            assert "Knoxville, TN" in page.inner_text("main .ok"), page.inner_text("main .ok") + " | " + page.inner_text("#toast")
+            print(f"[{name}] Use my location set home from the device position")
 
             print(f"[{name}] top destination: {first}")
             print(f"[{name}] google links {nav_links}, waze links {waze_links}, ics events {ics.count('BEGIN:VEVENT')}")

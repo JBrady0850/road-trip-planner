@@ -1,6 +1,8 @@
 # Catalog coordinate check (2026-10-15)
 
-Every base town and stop (236 points) was geocoded with OpenStreetMap Nominatim and
+## First pass
+
+Every base town and stop in the first release (236 points) was geocoded with OpenStreetMap Nominatim and
 compared with the catalog coordinates.
 
 | Result | Points |
@@ -45,3 +47,16 @@ The last six points, searched again with other names and with nearby map feature
 
 No catalog point remains unchecked. Hours, fees, and seasonal road closures still
 change, so confirm those before travel.
+
+## Stops added on 2026-10-15
+
+100 stops were added (187 to 287). Before: 14 destinations had three stops, 30 had
+four, 5 had five. After: 1 has four (Acadia; Thunder Hole and Sand Beach were not
+found by name), 9 have five, 35 have six, 4 have seven. Every added point was
+searched by name in OpenStreetMap Nominatim and the catalog coordinates are the
+coordinates Nominatim returned, rounded to four decimals (no hand-typed points).
+Places Nominatim could not find, or matched only to a road some distance away
+(Sliding Rock, Bellingrath Gardens, Lower Falls of the Yellowstone, Thunder Hole,
+Sand Beach, and others), were left out rather than guessed. Minutes to spend are
+planning estimates. Street addresses were taken from the Nominatim result where it
+had one; where it had none, the address names the road or the nearest town.

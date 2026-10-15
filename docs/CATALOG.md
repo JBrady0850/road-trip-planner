@@ -2,7 +2,9 @@
 
 `app/data/catalog.js` holds 49 starter destinations covering all 50 states. Each
 destination has a base town (where you would stay), the months it is usually best,
-interest tags, and 3 to 5 stops with coordinates and suggested time on site.
+interest tags, and 4 to 7 stops (287 in all) with coordinates and suggested time on site. The
+app uses the stops to pack each day to your pace and ranks them by your interests,
+so more stops per destination means better drafts.
 
 ## Accuracy
 

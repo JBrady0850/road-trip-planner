@@ -18,44 +18,77 @@
 
   // ---------- default profile ----------
   RT.defaultProfile = () => ({
-    traveler: "", home: { label: "", lat: null, lon: null, state: "" }, party: 1,
+    traveler: "", home: { label: "", lat: null, lon: null, state: "" }, party: 2,
     vehicle: { mpg: 25, heightIn: 0, fuelPrice: 3.25 },
-    rules: { maxDriveHours: 7, budgetCap: 1500, walkMiles: 5, nightsMin: 3, nightsMax: 7, checkinTarget: "15:00", checkinWindow: 60, ticketMargin: 30, arriveBeforeSunset: true, startTime: "08:30" },
-    lodging: { brand: "Any", nightlyLow: 120, nightlyHigh: 180, freeBreakfast: true },
+    rules: { maxDriveHours: 7, budgetCap: 1500, walkMiles: 5, nightsMin: 3, nightsMax: 7, checkinTarget: "15:00", checkinWindow: 60, ticketMargin: 30, arriveBeforeSunset: true, startTime: "08:30", stopsPerDay: 3, pace: "balanced" },
+    lodging: { brand: "Any", nightlyLow: 120, nightlyHigh: 180, freeBreakfast: true, comfort: "mid" },
     dining: { diet: "No restriction", upscaleDinners: 1, lunchCap: 30, foodPerDay: 55 },
-    interests: ["scenic"], months: [], flyOk: false, visited: [], aiKey: "", aiModel: "claude-sonnet-5-5"
+    interests: ["scenic", "parks", "food"], months: [], flyOk: false, visited: [], destState: "", aiKey: "", aiModel: "claude-sonnet-5-5"
   });
 
+  // ---------- presets ----------
+  // A pace sets every driving and timing rule at once; a comfort level sets every
+  // money field at once. The individual fields stay editable afterwards.
+  RT.PACE = {
+    relaxed: { label: "Relaxed", blurb: "Short drives, two stops a day, early check-in", maxDriveHours: 5, startTime: "09:00", checkinTarget: "14:00", checkinWindow: 90, walkMiles: 3, stopsPerDay: 2 },
+    balanced: { label: "Balanced", blurb: "Up to 7 hours of driving, three stops a day", maxDriveHours: 7, startTime: "08:30", checkinTarget: "15:00", checkinWindow: 60, walkMiles: 5, stopsPerDay: 3 },
+    ground: { label: "Cover ground", blurb: "Long days, four stops, late check-in", maxDriveHours: 9, startTime: "07:30", checkinTarget: "17:00", checkinWindow: 60, walkMiles: 5, stopsPerDay: 4 }
+  };
+  RT.COMFORT = {
+    economy: { label: "Economy", blurb: "Budget hotels, casual meals", nightlyLow: 80, nightlyHigh: 120, foodPerDay: 40, lunchCap: 20, upscaleDinners: 0 },
+    mid: { label: "Mid-range", blurb: "Standard hotels, one nice dinner", nightlyLow: 120, nightlyHigh: 180, foodPerDay: 55, lunchCap: 30, upscaleDinners: 1 },
+    comfort: { label: "Comfort", blurb: "Upscale hotels, good restaurants", nightlyLow: 180, nightlyHigh: 280, foodPerDay: 80, lunchCap: 45, upscaleDinners: 2 }
+  };
+  RT.applyPace = (profile, key) => { const p = RT.PACE[key]; if (!p) return false; const r = profile.rules; r.pace = key; ["maxDriveHours", "startTime", "checkinTarget", "checkinWindow", "walkMiles", "stopsPerDay"].forEach(k => r[k] = p[k]); return true; };
+  // The budget cap is rebuilt from the comfort level and the trip length, rounded to $50.
+  RT.suggestCap = (profile, nights) => { const L = profile.lodging, D = profile.dining, n = Math.max(1, nights || 4); const est = n * L.nightlyHigh + (n + 1) * (D.foodPerDay + 25) + 180; return Math.ceil(est * 1.1 / 50) * 50; };
+  RT.applyComfort = (profile, key, nights) => { const c = RT.COMFORT[key]; if (!c) return false; const L = profile.lodging, D = profile.dining; L.comfort = key; L.nightlyLow = c.nightlyLow; L.nightlyHigh = c.nightlyHigh; D.foodPerDay = c.foodPerDay; D.lunchCap = c.lunchCap; D.upscaleDinners = c.upscaleDinners; profile.rules.budgetCap = RT.suggestCap(profile, nights); return true; };
+
   // ---------- destination scoring ----------
-  RT.scoreDestinations = (profile, catalog, month) => {
+  const INTEREST_NAMES = { scenic: "scenic drives", parks: "parks", waterfalls: "waterfalls", beach: "beaches", fishing: "fishing", water: "water sports", history: "history", food: "food", lights: "lights and festivals", hiking: "easy hikes", caves: "caves", town: "small towns" };
+  RT.interestName = k => INTEREST_NAMES[k] || k;
+  const hoursText = h => h < 0.75 ? "under an hour" : h < 1.5 ? "about 1 hour" : `about ${Math.round(h)} hours`;
+  /* Rank catalog destinations for a profile. `nights` is the trip being planned
+     (falls back to the profile's longest trip); `state` limits the list to one
+     state's cities. Each result carries a rank, the base city, a plain-word label,
+     reasons with the strongest first, and the stops ordered by interest match. */
+  RT.scoreDestinations = (profile, catalog, month, nights, state) => {
     const home = profile.home.lat != null ? [profile.home.lat, profile.home.lon] : null;
     const visited = new Set(profile.visited || []);
-    return catalog.map(d => {
+    const span = nights || profile.rules.nightsMax || 7;
+    const list = state ? catalog.filter(d => d.states.includes(state)) : catalog;
+    const out = list.map(d => {
       const reasons = [];
-      let score = 0;
+      let score = 0, far = false, off = false, flight = false;
       const hit = d.tags.filter(t => profile.interests.includes(t));
       score += hit.length * 12;
-      if (hit.length) reasons.push(`matches ${hit.join(", ")}`);
-      const stopHits = d.stops.reduce((n, s) => n + s[5].filter(t => profile.interests.includes(t)).length, 0);
+      const stopsRanked = d.stops.map(s => ({ name: s[0], hits: s[5].filter(t => profile.interests.includes(t)).length, tags: s[5] })).sort((a, b) => b.hits - a.hits);
+      const stopHits = stopsRanked.reduce((n, s) => n + s.hits, 0);
       score += Math.min(stopHits, 8) * 2;
+      if (hit.length) reasons.push(`good for ${hit.map(RT.interestName).join(", ")}`);
       if (month) {
         if (d.months.includes(month)) { score += 15; reasons.push("in season"); }
-        else { score -= 30; reasons.push("off season for the month chosen"); }
+        else { score -= 30; off = true; reasons.push("usually out of season that month"); }
       }
       const newStates = d.states.filter(s => !visited.has(s));
       score += newStates.length * 6;
-      if (newStates.length) reasons.push(`adds ${newStates.join(", ")}`);
+      if (newStates.length) reasons.push(`new state${newStates.length > 1 ? "s" : ""}: ${newStates.join(", ")}`);
       let driveH = null;
       if (d.fly) {
-        if (!profile.flyOk) { score -= 100; reasons.push("needs a flight"); } else reasons.push("fly and drive");
+        flight = true;
+        if (!profile.flyOk) { score -= 100; reasons.unshift("needs a flight"); } else reasons.push("fly and drive");
       } else if (home) {
         driveH = estDriveHours(home, [d.base[1], d.base[2]]);
         const days = Math.ceil(driveH / profile.rules.maxDriveHours);
-        if (days > Math.floor(profile.rules.nightsMax / 2)) { score -= 40; reasons.push(`about ${Math.round(driveH)} h away, too far for ${profile.rules.nightsMax} nights`); }
-        else { score += Math.max(0, 20 - driveH * 1.5); reasons.push(`about ${Math.round(driveH)} h drive each way (estimate)`); }
+        if (days > Math.max(1, Math.floor(span / 2))) { score -= 40; far = true; reasons.unshift(`${hoursText(driveH)} from home, too far for ${span} nights`); }
+        else { score += Math.max(0, 20 - driveH * 1.5); reasons.push(`${hoursText(driveH)} from home`); }
       }
-      return { dest: d, score: Math.round(score), driveH, reasons };
+      score = Math.round(score);
+      const label = flight && !profile.flyOk ? "Needs a flight" : far ? "Far for this trip" : off ? "Out of season" : score >= 50 ? "Great fit" : score >= 30 ? "Good fit" : "Possible";
+      return { dest: d, city: d.base[0], score, driveH, reasons, label, stopsRanked };
     }).sort((a, b) => b.score - a.score);
+    out.forEach((r, i) => r.rank = i + 1);
+    return out;
   };
 
   // ---------- itinerary drafting ----------
@@ -67,33 +100,57 @@
 
   /* Draft a trip: drive days to and from the base, then sightseeing days that fill
      with catalog stops until the day's time runs out, with check-in near the target. */
-  RT.draftTrip = (profile, dest, startDate, nights) => {
-    const r = profile.rules, home = profile.home;
+  const typeOf = s => s[5][0] ? s[5][0][0].toUpperCase() + s[5][0].slice(1) : "Stop";
+  const orderForProfile = (profile, from, stops) => nearestOrder(from, stops.filter(s => s[5].some(t => profile.interests.includes(t))).concat(stops.filter(s => !s[5].some(t => profile.interests.includes(t)))));
+  /* Add stops from `pool` after `from` while the day has time and driving left.
+     Mutates pool. Returns {stops, t, cur}. */
+  const fillDay = (profile, pool, base, from, t, endMin, maxStops, state) => {
+    const r = profile.rules, stops = []; let cur = from, driveMin = 0;
+    while (pool.length && stops.length < maxStops) {
+      const s = pool[0];
+      const legMin = estDriveHours(cur, [s[2], s[3]]) * 60;
+      const back = estDriveHours([s[2], s[3]], [base.lat, base.lon]) * 60;
+      if (t + legMin + s[4] + back > endMin || (driveMin + legMin + back) / 60 > r.maxDriveHours) break;
+      pool.shift();
+      t += legMin; const arr = t; t += s[4]; driveMin += legMin;
+      stops.push(mkStop(s[0], s[1], s[2], s[3], { type: typeOf(s), arrive: fromMin(arr), depart: fromMin(t), minutes: s[4], state }));
+      cur = [s[2], s[3]];
+    }
+    return { stops, t, cur };
+  };
+  const shiftDay = (stops, min) => stops.forEach(s => { if (s.arrive) s.arrive = fromMin(toMin(s.arrive) + min); if (s.depart) s.depart = fromMin(toMin(s.depart) + min); });
+  const FREE = "Free day near ";
+  RT.isFreeDay = d => (d.title || "").startsWith(FREE);
+  /* Other catalog destinations within the day's driving reach of the trip's base,
+     nearest first, with their own interest score. */
+  RT.nearbyDestinations = (trip, catalog, profile) => {
+    const b = trip.base; if (!b) return [];
+    return catalog.filter(d => d.id !== trip.destId && !d.fly).map(d => {
+      const h = estDriveHours([b.lat, b.lon], [d.base[1], d.base[2]]);
+      const hits = d.stops.reduce((n, s) => n + s[5].filter(t => profile.interests.includes(t)).length, 0);
+      return { dest: d, hours: h, hits };
+    }).filter(x => x.hours * 2 <= profile.rules.maxDriveHours - 1).sort((a, b) => (b.hits - a.hits) || (a.hours - b.hours));
+  };
+  const freeNote = (trip, catalog, profile) => {
+    const near = catalog ? RT.nearbyDestinations(trip, catalog, profile).slice(0, 3) : [];
+    return near.length ? `Free day. Ideas within reach: ${near.map(n => `${n.dest.name} (${hoursText(n.hours)} away)`).join("; ")}. Use "Add a day trip" below, or search for your own stops.` : "Free day: add stops with the search box below.";
+  };
+
+  /* Draft a trip: drive days to and from the base, then sightseeing days packed to
+     the pace's stops per day; days left over become free days with nearby ideas. */
+  RT.draftTrip = (profile, dest, startDate, nights, catalog) => {
+    const r = profile.rules, home = profile.home, perDay = r.stopsPerDay || 3;
     const homeStop = extra => mkStop("Home", home.label, home.lat, home.lon, { type: "Home", state: home.state, ...extra });
     const base = { name: `Lodging near ${dest.base[0]}`, addr: dest.base[0], lat: dest.base[1], lon: dest.base[2] };
     const hotel = extra => mkStop(base.name, base.addr, base.lat, base.lon, { type: "Hotel", state: dest.states[0], booking_url: RT.lodgingSearchUrl(profile.lodging.brand, base.addr, base.lat, base.lon), ...extra });
     const driveH = dest.fly ? 0 : estDriveHours([home.lat, home.lon], [base.lat, base.lon]);
     const travelDays = dest.fly ? 0 : Math.max(1, Math.ceil(driveH / r.maxDriveHours));
-    const pool = nearestOrder([base.lat, base.lon], dest.stops.filter(s => s[5].some(t => profile.interests.includes(t))).concat(dest.stops.filter(s => !s[5].some(t => profile.interests.includes(t)))));
+    const pool = orderForProfile(profile, [base.lat, base.lon], dest.stops);
     const days = [];
     let date = startDate, used = 0;
-    const typeOf = s => s[5][0] ? s[5][0][0].toUpperCase() + s[5][0].slice(1) : "Stop";
-    // Add pool stops after `from` while time allows; returns {stops, t, cur}.
-    const fill = (from, t, endMin, maxStops) => {
-      const stops = []; let cur = from, driveMin = 0;
-      while (pool.length && stops.length < maxStops) {
-        const s = pool[0];
-        const legMin = estDriveHours(cur, [s[2], s[3]]) * 60;
-        const back = estDriveHours([s[2], s[3]], [base.lat, base.lon]) * 60;
-        if (t + legMin + s[4] + back > endMin || (driveMin + legMin + back) / 60 > r.maxDriveHours) break;
-        pool.shift();
-        t += legMin; const arr = t; t += s[4]; driveMin += legMin;
-        stops.push(mkStop(s[0], s[1], s[2], s[3], { type: typeOf(s), arrive: fromMin(arr), depart: fromMin(t), minutes: s[4], state: dest.states[0] }));
-        cur = [s[2], s[3]];
-      }
-      return { stops, t, cur };
-    };
+    const fill = (from, t, endMin, maxStops) => fillDay(profile, pool, base, from, t, endMin, maxStops, dest.states[0]);
     const checkinMin = toMin(r.checkinTarget);
+    const trip = { name: `${dest.name} Road Trip`, destId: dest.id, states: dest.states.slice(), fly: !!dest.fly, base, days, createdBy: "catalog" };
     // outbound
     if (!dest.fly) {
       const legH = driveH / travelDays;
@@ -104,24 +161,26 @@
         const s0 = k === 0 ? homeStop({ depart: r.startTime }) : mkStop("Overnight en route", "En route (choose a town)", null, null, { type: "Hotel", depart: r.startTime });
         let mid = [];
         if (last && arrive < checkinMin - r.checkinWindow) {
-          // Early arrival: see nearby sights first so check-in lands near the target.
-          const f = fill([base.lat, base.lon], arrive, checkinMin + 30, 3);
+          // Early arrival: see sights on the way in until the check-in window.
+          const f = fill([base.lat, base.lon], arrive, checkinMin + r.checkinWindow, perDay);
           mid = f.stops; if (mid.length) arrive = f.t + estDriveHours(f.cur, [base.lat, base.lon]) * 60;
         }
         const s1 = last ? hotel({ arrive: fromMin(arrive), checkin: true }) : mkStop("Overnight en route", "En route (choose a town)", null, null, { type: "Hotel", arrive: fromMin(arrive), checkin: true });
-        days.push({ date, title: last ? `Drive to ${dest.base[0]}` : `Drive toward ${dest.base[0]}`, stops: [s0, ...mid, s1] });
+        const stops = [s0, ...mid, s1];
+        // Still early? Leave home later so check-in lands on the target.
+        if (last && arrive < checkinMin - r.checkinWindow) { shiftDay(stops, checkinMin - arrive); s0.notes = `Leaving later so you arrive at check-in time (${hm12(r.checkinTarget)}). Leave earlier if you would rather have more time at the stops.`; }
+        days.push({ date, title: last ? `Drive to ${dest.base[0]}` : `Drive toward ${dest.base[0]}`, stops });
         date = addDays(date, 1); used++;
       }
     }
-    // sightseeing days: spread the remaining stops evenly; days without stops stay open
+    // sightseeing days: pack each to the pace, then free days with nearby ideas
     const sightDays = Math.max(1, nights + 1 - used - (dest.fly ? 0 : travelDays));
     for (let k = 0; k < sightDays; k++) {
-      const perDay = Math.ceil(pool.length / (sightDays - k)) || 0;
       const f = fill([base.lat, base.lon], toMin(r.startTime), checkinMin + 180, perDay);
       const back = f.t + estDriveHours(f.cur, [base.lat, base.lon]) * 60;
       const open = !f.stops.length;
-      const stops = [hotel({ depart: r.startTime }), ...f.stops, hotel(open ? { notes: "Open day: add stops with the search box below." } : { arrive: fromMin(back) })];
-      days.push({ date, title: open ? `Open day near ${dest.base[0]}` : `${dest.name}, day ${k + 1}`, stops });
+      const stops = [hotel({ depart: r.startTime }), ...f.stops, hotel(open ? { notes: freeNote(trip, catalog, profile) } : { arrive: fromMin(back) })];
+      days.push({ date, title: open ? `${FREE}${dest.base[0]}` : `${dest.name}, day ${k + 1}`, stops });
       date = addDays(date, 1); used++;
     }
     // return
@@ -136,7 +195,26 @@
         date = addDays(date, 1);
       }
     }
-    return { name: `${dest.name} Road Trip`, destId: dest.id, states: dest.states.slice(), fly: !!dest.fly, days, createdBy: "catalog" };
+    return trip;
+  };
+
+  /* Turn free days into day trips to another catalog destination. Returns the
+     number of days filled. */
+  RT.fillFreeDays = (trip, profile, near) => {
+    if (!near || !trip.base) return 0;
+    const d2 = near.dest, r = profile.rules, base = trip.base, perDay = r.stopsPerDay || 3;
+    const pool = orderForProfile(profile, [base.lat, base.lon], d2.stops);
+    let n = 0;
+    trip.days.filter(RT.isFreeDay).forEach(day => {
+      if (!pool.length) return;
+      const start = day.stops[0], end = day.stops[day.stops.length - 1];
+      const f = fillDay(profile, pool, base, [base.lat, base.lon], toMin(start.depart || r.startTime), toMin(r.checkinTarget) + 180, perDay, d2.states[0]);
+      if (!f.stops.length) return;
+      end.arrive = fromMin(f.t + estDriveHours(f.cur, [base.lat, base.lon]) * 60); end.notes = "";
+      day.stops = [start, ...f.stops, end]; day.title = `Day trip: ${d2.name}`; n++;
+    });
+    if (n) d2.states.forEach(s => { if (!trip.states.includes(s)) trip.states.push(s); });
+    return n;
   };
 
   /* Rebuild one day's times from routed legs: keep the first departure and each
