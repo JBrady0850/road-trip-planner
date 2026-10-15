@@ -13,6 +13,9 @@
   Nominatim, stop coordinates to the OSRM router, stop coordinates to the National
   Weather Service, and, only if you add your own key, your trip preferences to the
   Anthropic API.
+- The contact email in Settings is optional and is not an account; no sign-up is
+  needed anywhere. If you fill it in, it is sent only with place searches to
+  OpenStreetMap, which asks heavy users to include one.
 - Your API key stays in this browser and is sent only to api.anthropic.com. Backups
   leave the key out.
 - The app never books, reserves, buys, or signs in anywhere. Links open the official

@@ -7,7 +7,7 @@
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.4.1";
+  const APP_VERSION = "0.4.2";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
   const ICONS = new Set(["scenic","parks","waterfalls","beach","lighthouses","fishing","water","history","food","lights","hiking","caves","town"]);
   const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
@@ -216,7 +216,7 @@
         <div class="chips" style="margin-bottom:10px">${INTERESTS.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div>
         ${statesGrid(true)}</details>
       ${shown.length ? `<div class="grid">${shown.map(card).join("")}</div>` : `<div class="card"><p>No catalog city in ${esc(stName)} yet. Pick "Anywhere within reach", or add one (see docs/CATALOG.md in the project).</p></div>`}
-      ${!ai ? `<p class="small muted">Optional: add your own Anthropic API key in Settings for AI-written itineraries.</p>` : ""}`;
+      ${!ai ? `<p class="small muted">Optional: AI-written itineraries need your own Anthropic API key. <button class="btn small ghost" data-act="go" data-t="settings">Set it up in Settings</button></p>` : ""}`;
   }
 
   // ---------- trip editor ----------
@@ -394,13 +394,18 @@
   function vSettings() {
     const p = st.profile;
     return `<h1>Settings</h1>${vDevices()}
-      <div class="card"><h2>Optional AI itineraries</h2><p class="small muted">Your own Anthropic API key, stored only in this browser and sent only to api.anthropic.com. Usage is billed to your account.</p>
+      <div class="card"><h2>Optional AI itineraries</h2><p class="small muted">Skip this unless you want Claude to write custom itineraries. Everything else in the app works without it.</p>
+      <ol class="steps-list small"><li>Create a Claude Console account at <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a>.</li>
+        <li>Make a key on the <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">API keys page</a>, then paste it below.</li></ol>
+      <p class="small muted">The key stays in this browser and is sent only to api.anthropic.com. Usage is billed to your Console account.</p>
       ${field("API key", `<input type="password" data-bind="profile.aiKey" value="${esc(p.aiKey)}" autocomplete="off">`)}
       ${field("Model", `<input type="text" data-bind="profile.aiModel" value="${esc(p.aiModel)}">`)}</div>
-      <div class="card"><h2>Services</h2>
-      ${field("Contact email for OpenStreetMap place search (recommended by their usage policy)", `<input type="email" data-bind="profile.contactEmail" value="${esc(p.contactEmail || "")}">`)}
-      ${field("Routing server (OSRM)", `<input type="url" data-bind="profile.osrmUrl" value="${esc(p.osrmUrl || "")}" placeholder="https://router.project-osrm.org">`)}
-      <p class="small muted">The public OSRM demo server is for light use and has no traffic data.</p></div>
+      <div class="card"><h2>Place search and routing</h2><p class="small muted">Both are free public services. No sign-up or account is needed, and you can leave both boxes empty.</p>
+      ${field("Contact email for place search (optional)", `<input type="email" data-bind="profile.contactEmail" value="${esc(p.contactEmail || "")}" placeholder="Leave empty unless you search a lot">`)}
+      <p class="small muted">No sign-up: this is not an account. OpenStreetMap asks people who make large numbers of searches to include an email so its volunteers can reach them if there is a problem. Planning a trip is a light load. If you fill it in, it is sent only with place searches to OpenStreetMap.
+        <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noopener">Place search usage policy</a> · <a href="https://nominatim.org/release-docs/latest/api/Search/" target="_blank" rel="noopener">What the email is for</a></p>
+      ${field("Routing server (optional)", `<input type="url" data-bind="profile.osrmUrl" value="${esc(p.osrmUrl || "")}" placeholder="https://router.project-osrm.org">`)}
+      <p class="small muted">Leave empty to use the free public OSRM demo server. It is for light use and has no traffic data. To use your own OSRM server, paste its address. <a href="https://github.com/Project-OSRM/osrm-backend/wiki/Api-usage-policy" target="_blank" rel="noopener">Demo server usage policy</a></p></div>
       <div class="card"><h2>Your data</h2><p class="small muted">Everything stays in this browser. Back it up or move it to another device with a file.</p>
       <div class="row"><button class="btn" data-act="backup">Back up all data</button><label class="btn ghost">Restore from file<input type="file" accept=".json,application/json" data-act="restore" hidden></label><button class="btn warn" data-act="reset">Erase all data</button></div></div>
       <div class="card"><h2>About</h2><p class="small">Road Trip Planner, open source (MIT). Map data © OpenStreetMap contributors. Routing by OSRM. Weather from the National Weather Service. Destination details change: verify hours, prices, and closures before you travel.</p></div>`;
