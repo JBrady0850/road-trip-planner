@@ -186,3 +186,25 @@ def test_the_city_field_has_a_label_and_enter_goes_to_trips(page):
     page.press("[data-bind='profile.destCity']", "Enter")
     page.wait_for_selector(".card.dest.pick", timeout=8000)
     assert "Chattanooga" in page.inner_text(".card.dest.pick")
+
+
+def test_a_lookup_answer_for_old_text_is_dropped(page):
+    """The traveler types one town, taps Next, and changes City before the map answers."""
+    held = []
+    page.unroute("https://nominatim.openstreetmap.org/**")
+    page.route("https://nominatim.openstreetmap.org/**", lambda route: held.append(route))
+    page.click("#tabs [data-tab=interview]")
+    page.select_option("[data-bind='profile.destState']", "TN")
+    page.fill("[data-bind='profile.destCity']", "Pigeon Forge")
+    page.locator("[data-bind='profile.destCity']").dispatch_event("change")
+    page.click(".stepbar [data-act=findDest]")
+    page.wait_for_function("1", timeout=1000)
+    for _ in range(50):
+        if held: break
+        page.wait_for_timeout(100)
+    assert held, "the lookup is waiting for an answer"
+    page.evaluate("RT.state.profile.destCity = 'gatlinburg'")
+    held[0].fulfill(status=200, content_type="application/json", body=json.dumps(PIGEON_FORGE))
+    page.wait_for_selector(".card.dest.pick", timeout=8000)
+    assert "Great Smoky Mountains" in page.inner_text(".card.dest.pick"), "the answer for the old text is not used"
+    assert page.evaluate("RT.state.profile.destPlace.q") == "gatlinburg"
