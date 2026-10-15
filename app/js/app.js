@@ -25,7 +25,30 @@
   const view = $("#view");
   const toast = msg => { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 3200); };
   const money = n => "$" + Math.round(n).toLocaleString();
-  const download = (name, text, type = "text/plain") => { const b = new Blob([text], { type }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); };
+  // Saving files works the same way everywhere: the desktop window opens a Save dialog,
+  // iPad and iPhone open the share sheet (Save to Files), and every other browser downloads.
+  const appleTouch = () => /iPad|iPhone|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const blobDownload = f => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([f.text], { type: f.type })); a.download = f.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); };
+  async function saveFiles(list, note = "") {
+    const what = list.length === 1 ? list[0].name : `${list.length} files`;
+    const api = window.pywebview && window.pywebview.api;
+    if (api && api.save_file) {
+      let saved = [];
+      for (const f of list) { try { const where = await api.save_file(f.name, f.text); if (where) saved.push(where); } catch (e) { toast("Could not save: " + e); return; } }
+      if (saved.length) toast(`Saved ${saved.length === 1 ? saved[0] : saved.length + " files"}${note}`);
+      return;
+    }
+    if (appleTouch() && navigator.share && navigator.canShare) {
+      const files = list.map(f => new File([f.text], f.name, { type: f.type }));
+      if (navigator.canShare({ files })) {
+        toast("Tap Save to Files to keep it on this device");
+        try { await navigator.share({ files }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+      }
+    }
+    list.forEach(blobDownload);
+    toast(`Saved ${what}. Look in your Downloads folder.${note}`);
+  }
+  const download = (name, text, type = "text/plain") => saveFiles([{ name, text, type }]);
   const slug = s => (s || "trip").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const field = (label, inner, cls = "") => `<div class="field ${cls}"><label>${label}</label>${inner}</div>`;
   const num = (path, v, attrs = "") => `<input type="number" data-bind="${path}" value="${esc(v)}" ${attrs}>`;
@@ -122,7 +145,7 @@
   // ---------- trip editor ----------
   function vTrip() {
     const t = st.trip;
-    if (!t) return `<h1>Trip</h1><div class="card"><p>No trip yet. Finish the interview and pick a destination, or load a saved trip file.</p><div class="row"><button class="btn" data-act="go" data-t="interview">Start the interview</button><label class="btn ghost">Load trip file<input type="file" accept=".json" data-act="loadTrip" hidden></label></div></div>`;
+    if (!t) return `<h1>Trip</h1><div class="card"><p>No trip yet. Finish the interview and pick a destination, or load a saved trip file.</p><div class="row"><button class="btn" data-act="go" data-t="interview">Start the interview</button><label class="btn ghost">Load trip file<input type="file" accept=".json,application/json" data-act="loadTrip" hidden></label></div></div>`;
     const f = st.findings, errs = f.filter(x => x.level === "ERROR").length, warns = f.filter(x => x.level === "WARN").length;
     let n = 0;
     return `<h1>${esc(t.name)}</h1>
@@ -131,7 +154,7 @@
         <button class="btn ghost" data-act="routeAll">Route check (live drive times)</button>
         <button class="btn ghost" data-act="retime" ${Object.keys(st.routes).length ? "" : "disabled"}>Re-time from routes</button>
         <button class="btn ghost" data-act="saveTrip">Save trip file</button>
-        <label class="btn ghost">Load trip file<input type="file" accept=".json" data-act="loadTrip" hidden></label>
+        <label class="btn ghost">Load trip file<input type="file" accept=".json,application/json" data-act="loadTrip" hidden></label>
         <button class="btn ghost" data-act="itinerary">Download itinerary</button>
         <button class="btn ghost" data-act="print">Print</button>
         <button class="btn warn" data-act="clearTrip">Clear trip</button></div>
@@ -231,7 +254,7 @@
       ${field("Routing server (OSRM)", `<input type="url" data-bind="profile.osrmUrl" value="${esc(p.osrmUrl || "")}" placeholder="https://router.project-osrm.org">`)}
       <p class="small muted">The public OSRM demo server is for light use and has no traffic data.</p></div>
       <div class="card"><h2>Your data</h2><p class="small muted">Everything stays in this browser. Back it up or move it to another device with a file.</p>
-      <div class="row"><button class="btn" data-act="backup">Back up all data</button><label class="btn ghost">Restore from file<input type="file" accept=".json" data-act="restore" hidden></label><button class="btn warn" data-act="reset">Erase all data</button></div></div>
+      <div class="row"><button class="btn" data-act="backup">Back up all data</button><label class="btn ghost">Restore from file<input type="file" accept=".json,application/json" data-act="restore" hidden></label><button class="btn warn" data-act="reset">Erase all data</button></div></div>
       <div class="card"><h2>About</h2><p class="small">Road Trip Planner, open source (MIT). Map data © OpenStreetMap contributors. Routing by OSRM. Weather from the National Weather Service. Destination details change: verify hours, prices, and closures before you travel.</p></div>`;
   }
 
@@ -281,7 +304,7 @@
     share: async () => { const text = linksText(); if (navigator.share) { try { await navigator.share({ title: st.trip.name, text }); return; } catch (e) { if (e.name === "AbortError") return; } } location.href = `mailto:?subject=${encodeURIComponent(st.trip.name)}&body=${encodeURIComponent(text.slice(0, 1800))}`; },
     dlIcs: () => { stampTZ(st.trip); download(`${slug(st.trip.name)}.ics`, RT.ics(st.trip), "text/calendar"); },
     dlCsv: () => download(`${slug(st.trip.name)}-mymaps.csv`, RT.csv(st.trip), "text/csv"),
-    dlKml: () => { const t = st.trip; let n = 0; t.days.forEach((d, i) => { const r = st.routes[d.date]; download(`${slug(t.name)}-day${i + 1}.kml`, RT.kmlDay(t, i, r), "application/vnd.google-earth.kml+xml"); if (r) n++; }); toast(n ? `Downloaded ${t.days.length} KML file(s), ${n} with routes` : "Downloaded pins only; run Route check on the Trip tab for route lines"); },
+    dlKml: () => { const t = st.trip; let n = 0; const files = t.days.map((d, i) => { const r = st.routes[d.date]; if (r) n++; return { name: `${slug(t.name)}-day${i + 1}.kml`, text: RT.kmlDay(t, i, r), type: "application/vnd.google-earth.kml+xml" }; }); saveFiles(files, n ? "" : " Pins only; run Route check on the Trip tab for route lines."); },
     dlLinks: () => download(`${slug(st.trip.name)}-links.html`, linksHtml(), "text/html"),
     weather: async () => { st.weather = []; const seen = new Set(); for (const d of st.trip.days) for (const s of d.stops) { if (s.lat == null || s.lat === "") continue; const k = `${d.date}|${(+s.lat).toFixed(2)}|${(+s.lon).toFixed(2)}`; if (seen.has(k)) continue; seen.add(k); st.busy = `Checking ${s.name}…`; try { const w = await RT.services.weatherFor(s.lat, s.lon, d.date); if (w.tz) d.tz = w.tz; st.weather.push({ day: U.dayLabel(d.date), stop: s.name, ...w }); } catch (e) { st.weather.push({ day: U.dayLabel(d.date), stop: s.name, forecast: [`UNVERIFIED: weather service unavailable (${e.message})`], alerts: [], page: RT.services.forecastPage(s.lat, s.lon) }); } render(); } st.busy = ""; runCheck(); render(); },
     markDone: () => { const v = new Set(st.profile.visited); (st.trip.states || []).forEach(s => v.add(s)); st.profile.visited = [...v]; toast("States marked visited"); render(); },
@@ -365,11 +388,20 @@
     if (el.dataset.act === "loadTrip" || el.dataset.act === "restore") readFile(el);
   });
   view.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "homeQ") actions.homeSearch(); if (e.key === "Enter" && /^add-/.test(e.target.id)) actions.addStop({ dataset: { d: e.target.id.slice(4) } }); });
+  // Trip files written for the command-line version keep days beside the trip and use snake_case rules.
+  function fromCommandLine(j) {
+    const map = { max_drive_hours: "maxDriveHours", checkin_target: "checkinTarget", checkin_window_minutes: "checkinWindow", ticket_margin_minutes: "ticketMargin", arrive_before_sunset: "arriveBeforeSunset" };
+    Object.entries(j.trip.rules || {}).forEach(([k, v]) => { if (map[k]) st.profile.rules[map[k]] = v; });
+    const states = new Set();
+    j.days.forEach(d => d.stops.forEach(x => { const m = String(x.address || "").match(/,\s*([A-Z]{2})\b/); if (m && RT_STATE_BY_ABBR[m[1]] && x.type !== "Home") states.add(m[1]); }));
+    return { name: j.trip.name || "Road Trip", days: j.days, states: [...states], createdBy: "file" };
+  }
   function readFile(el) {
     const f = el.files[0]; if (!f) return; const rd = new FileReader();
     rd.onload = () => { try { const j = JSON.parse(rd.result);
       if (j.format === "road-trip-planner-backup/1") { st.profile = Object.assign(RT.defaultProfile(), j.profile); st.trip = j.trip; st.routes = j.routes || {}; toast("Data restored"); }
       else if (j.trip && j.trip.days) { st.trip = j.trip; if (j.rules) Object.assign(st.profile.rules, j.rules); st.routes = {}; toast("Trip loaded"); }
+      else if (j.trip && Array.isArray(j.days)) { st.trip = fromCommandLine(j); st.routes = {}; toast("Trip loaded"); }
       else throw new Error("not a trip file");
       runCheck(); setTab("trip"); } catch (e) { toast("Could not read that file: " + e.message); } };
     rd.readAsText(f);

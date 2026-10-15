@@ -34,6 +34,38 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+class SaveApi:
+    """Called from the app in the desktop window: window.pywebview.api.save_file(name, text).
+
+    The window cannot download files like a browser, so the app hands the file
+    here, the person picks a location in the normal Save dialog, and it is written.
+    Returns the saved path, or "" when the dialog is cancelled.
+    """
+
+    def __init__(self, ask_path=None):
+        self._ask_path = ask_path  # replaced in tests; defaults to the window Save dialog
+
+    def save_file(self, name: str, text: str) -> str:
+        name = Path(str(name)).name or "road-trip.txt"
+        target = self._ask_path(name) if self._ask_path else _save_dialog(name)
+        if not target:
+            return ""
+        target = Path(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(str(text), encoding="utf-8", newline="")
+        return str(target)
+
+
+def _save_dialog(name: str):
+    import webview
+    kind = getattr(getattr(webview, "FileDialog", None), "SAVE", None) or webview.SAVE_DIALOG
+    docs = Path.home() / "Documents"
+    picked = webview.windows[0].create_file_dialog(kind, directory=str(docs if docs.is_dir() else Path.home()), save_filename=name)
+    if isinstance(picked, (list, tuple)):
+        picked = picked[0] if picked else None
+    return picked
+
+
 def free_port(preferred: int) -> int:
     for port in (preferred, 0):
         with socket.socket() as s:
@@ -66,7 +98,7 @@ def main() -> int:
         if not a.no_browser:
             try:
                 import webview  # optional: pip install pywebview
-                webview.create_window("Road Trip Planner", url, width=1200, height=850)
+                webview.create_window("Road Trip Planner", url, width=1200, height=850, js_api=SaveApi())
                 webview.start()
                 return 0
             except ImportError:

@@ -39,6 +39,25 @@ these same steps the first time you open it on a tablet, and again under
 Each device keeps its own trips. To move a trip to another device, use
 **Settings, Back up all data**, then **Restore from file** on the other device.
 
+## Save your trips
+
+The app keeps your trips on the device automatically, so they are there the next
+time you open it. To keep a trip as a file you can store, copy, or open somewhere
+else, open the **Trip** tab and tap **Save trip file**.
+
+| Device | Where the file goes |
+|---|---|
+| iPad or iPhone | A sheet opens: tap **Save to Files**, then pick **On My iPad** or **iCloud Drive** |
+| Android tablet or phone | Your **Downloads** folder (Files app) |
+| Computer, in a browser | Your **Downloads** folder |
+| Computer, desktop window | A **Save** dialog opens so you choose the folder |
+
+To open it again, on the same device or a different one, use **Trip, Load trip
+file**. **Settings, Back up all data** saves everything at once: trips, settings,
+and states visited. The itinerary, calendar, map, and links files save the same
+way. Trip files also open in the command-line version, and its trip files open in
+the app.
+
 ## See it
 
 Screenshots use a sample traveler from Knoxville, TN; weather shown is sample data.
@@ -137,6 +156,7 @@ ROADTRIP_NWS_USER_AGENT="(my-roadtrip, me@example.com)" python -m roadtrip weath
 python -m pytest -q          # engine unit tests
 python tests/ui_smoke.py     # full app flow in headless Chromium (pip install playwright)
 python tests/tablet_smoke.py # iPad and Android install steps, icons, and layout
+python tests/save_smoke.py   # save and reopen a trip in every version
 ```
 
 ## Data sources and credits
