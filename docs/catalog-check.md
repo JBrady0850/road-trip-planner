@@ -30,8 +30,18 @@ Confirmed on a second search: Mammoth Cave Visitor Center, Capitol Reef Visitor
 Center, Babcock State Park (catalog point is the grist mill, inside the park).
 Corrected on a second search: Turnagain Arm Beluga Point.
 
-Still UNVERIFIED (coordinates from published park maps, not matched in
-OpenStreetMap by name): Cumberland Falls State Resort Park, Trail Ridge Road Alpine
-Visitor Center, Painted Canyon overlook, South Unit Scenic Loop, North Unit River
-Bend Overlook, Punaluu Black Sand Beach. Use the Trip tab "Find location" button to
-confirm these before travel.
+## Third search (2026-10-15)
+
+The last six points, searched again with other names and with nearby map features:
+
+| Stop | Result |
+|---|---|
+| Cumberland Falls State Resort Park | Confirmed; 0.1 km from the falls in OpenStreetMap |
+| Trail Ridge Road Alpine Visitor Center | Confirmed; 0.05 km from the visitor center |
+| Painted Canyon overlook | Confirmed; 0.3 km from the Painted Canyon Visitor Center |
+| South Unit Scenic Loop | Confirmed; 0.15 km from the Scenic Loop Drive road line |
+| Punaluu Black Sand Beach | Confirmed; 0.1 km from the beach (OpenStreetMap spells it Punalu'u) |
+| North Unit River Bend Overlook | Moved 9 km west, from the North Unit entrance area to the overlook; the address now names the overlook as OpenStreetMap spells it (Riverbend Overlook) |
+
+No catalog point remains unchecked. Hours, fees, and seasonal road closures still
+change, so confirm those before travel.

@@ -206,7 +206,7 @@ window.RT_CATALOG = [
   {id:"nd-roosevelt", name:"Theodore Roosevelt National Park", states:["ND"], base:["Medora, ND",46.9139,-103.5244], months:[5,6,7,8,9,10], tags:["parks","scenic","history","hiking"], stops:[
     ["Painted Canyon overlook","I-94 Exit 32, Belfield, ND",46.8930,-103.3800,30,["scenic","parks"]],
     ["South Unit Scenic Loop","Scenic Loop Dr, Medora, ND",46.9500,-103.5000,120,["scenic","parks"]],
-    ["North Unit River Bend Overlook","Theodore Roosevelt NP North Unit, Watford City, ND",47.6000,-103.2580,90,["scenic","parks"]]]},
+    ["North Unit River Bend Overlook","Riverbend Overlook, McKenzie County, ND",47.6087,-103.3782,90,["scenic","parks"]]]},
   {id:"ne-ks-plains", name:"Great Plains Landmarks", states:["NE","KS"], base:["Gering, NE",41.8258,-103.6605], months:[5,6,7,8,9,10], tags:["history","scenic","hiking"], stops:[
     ["Scotts Bluff National Monument","190276 Old Oregon Trail, Gering, NE",41.8280,-103.7070,90,["history","parks","scenic"]],
     ["Chimney Rock National Historic Site","9822 County Rd 75, Bayard, NE",41.7030,-103.3480,45,["history","scenic"]],
