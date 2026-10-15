@@ -10,7 +10,7 @@
   const hm12 = t => { if (!t) return ""; let [h, m] = t.split(":").map(Number); const ap = h >= 12 ? "p.m." : "a.m."; h = h % 12 || 12; return `${h}:${String(m).padStart(2, "0")} ${ap}`; };
   const haversineMi = (a, b) => { const R = 3958.8, r = x => x * Math.PI / 180; const dLat = r(b[0] - a[0]), dLon = r(b[1] - a[1]); const s = Math.sin(dLat / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(s)); };
   // Road distance is typically about 1.2 times straight-line; about 58 mph average
-  // across interstates and slower roads. Route check replaces this with routed times.
+  // across interstates and slower roads. Check drive times replaces this with routed times.
   const estDriveHours = (a, b) => haversineMi(a, b) * 1.2 / 58;
   const dayLabel = iso => { const d = new Date(iso + "T12:00:00"); return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); };
   const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -133,7 +133,7 @@
   };
   const freeNote = (trip, catalog, profile) => {
     const near = catalog ? RT.nearbyDestinations(trip, catalog, profile).slice(0, 3) : [];
-    return near.length ? `Free day. Ideas within reach: ${near.map(n => `${n.dest.name} (${hoursText(n.hours)} away)`).join("; ")}. Use "Add a day trip" below, or search for your own stops.` : "Free day: add stops with the search box below.";
+    return near.length ? `Free day. Ideas within reach: ${near.map(n => `${n.dest.name} (${hoursText(n.hours)} away)`).join("; ")}. Tap one of the "Free days: add a day trip" buttons near the top of this page, or search for your own stops below.` : "Free day: add stops with the search box below.";
   };
 
   /* Draft a trip: drive days to and from the base, then sightseeing days packed to
@@ -286,7 +286,7 @@
         else if (h > r.maxDriveHours - 0.5) add("WARN", day, "drive cap", `${h.toFixed(1)} h is within 30 min of the cap; routing has no traffic data`);
       } else if (!route) {
         let est = 0; for (let k = 1; k < st.length; k++) { const a = st[k - 1], b = st[k]; if (hasXY(a) && hasXY(b)) est += estDriveHours([+a.lat, +a.lon], [+b.lat, +b.lon]); }
-        if (est > r.maxDriveHours) add("WARN", day, "drive cap", `about ${est.toFixed(1)} h estimated driving; run Route check for routed times`);
+        if (est > r.maxDriveHours) add("WARN", day, "drive cap", `about ${est.toFixed(1)} h estimated driving; tap Check drive times for routed times`);
       }
       st.forEach(s => { if (s.checkin && s.arrive) { const diff = toMin(s.arrive) - toMin(r.checkinTarget); if (Math.abs(diff) > r.checkinWindow) add("WARN", day, "check-in", `${s.name} check-in ${hm12(s.arrive)} is ${Math.abs(diff)} min ${diff > 0 ? "after" : "before"} the ${hm12(r.checkinTarget)} target`); } });
       st.forEach(s => { if (s.timed_entry && s.arrive && toMin(s.arrive) > toMin(s.timed_entry) - r.ticketMargin) add("WARN", day, "tickets", `${s.name}: arrive ${hm12(s.arrive)} leaves less than ${r.ticketMargin} min before the ${hm12(s.timed_entry)} entry`); });

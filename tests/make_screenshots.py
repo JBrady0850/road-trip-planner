@@ -81,6 +81,7 @@ def main():
             page.click("summary:has-text('Tools')")
             page.click("[data-act=check]")
             page.click("[data-act=toggleStop][data-d='0'][data-s='1']")
+            page.evaluate("window.scrollTo(0, 0)")
             shot("03-trip-check")
 
             page.click("#tabs [data-tab=navigate]")

@@ -42,6 +42,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 #tabs button { border: 0; background: transparent; padding: 8px 11px; border-radius: 8px; cursor: pointer; white-space: nowrap; color: var(--sign-ink); opacity: .86; min-height: 40px; font: 600 1rem/1 var(--display); letter-spacing: .02em; }
 #tabs button:hover { opacity: 1; background: rgba(255,255,255,.12); }
 #tabs button[aria-selected="true"] { background: var(--sign-ink); color: var(--sign); opacity: 1; }
+#tabs .stepno { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 50%; border: 1.5px solid currentColor; font-size: .8rem; line-height: 1; }
+#tabs button[aria-selected="true"] .stepno { background: var(--sign); color: var(--sign-ink); border-color: var(--sign); }
+.tab-gap { width: 1px; align-self: stretch; margin: 6px 6px; background: rgba(255,255,255,.35); }
 
 main { width: 100%; max-width: 1040px; margin: 0 auto; padding: 16px 16px max(16px, env(safe-area-inset-bottom)); flex: 1; }
 h1, h2, h3 { font-family: var(--display); letter-spacing: .01em; }
@@ -127,6 +130,16 @@ details.inline { margin: 0; display: inline-block; } details.inline > summary { 
 .shield small { font-size: .5rem; letter-spacing: .1em; margin-bottom: 7px; }
 .dayhead h2 { font-size: 1.2rem; }
 
+/* step bar: the way forward is always the button at the bottom */
+.stepbar { margin: 18px 0 6px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-top: 5px solid var(--sign); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; justify-content: space-between; }
+.step-where { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.step-count { font: 700 .8rem/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.step-name { font: 700 1.15rem/1.1 var(--display); }
+.dots { display: inline-flex; gap: 5px; } .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); } .dot.done { background: var(--hill-near); } .dot.on { background: var(--caution); box-shadow: 0 0 0 2px var(--sign); }
+.step-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-left: auto; }
+.step-actions .btn.big { min-width: 220px; justify-content: center; }
+@media (max-width: 600px) { .step-actions { width: 100%; margin-left: 0; } .step-actions .btn { flex: 1 1 100%; justify-content: center; } .step-actions .step-next { order: -1; } }
+
 /* feedback */
 .ease { display: flex; gap: 8px; flex-wrap: wrap; }
 .ease-btn { width: 64px; min-height: 52px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); cursor: pointer; font: 700 1.2rem/1 var(--display); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
@@ -171,4 +184,4 @@ main:focus { outline: none; }
 .foot-note { margin: 0; opacity: .85; }
 
 @media print { .install, .top, .noprint, #toast, .hero, .foot { display: none !important; } body { background: #fff; color: #000; } .card { box-shadow: none; break-inside: avoid; } }
-@media (max-width: 600px) { main { padding: 12px; } .stop { grid-template-columns: 28px 1fr; } .sign { margin: 12px; padding: 12px 14px 14px; } .sign h1 { font-size: 1.8rem; } .hero { min-height: 190px; } }
+@media (max-width: 600px) { .top { position: static; } main { padding: 12px; } .stop { grid-template-columns: 28px 1fr; } .sign { margin: 12px; padding: 12px 14px 14px; } .sign h1 { font-size: 1.8rem; } .hero { min-height: 190px; } }

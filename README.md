@@ -43,11 +43,20 @@ these same steps the first time you open it on a tablet, and again under
 Each device keeps its own trips. To move a trip to another device, use
 **Settings, Back up all data**, then **Restore from file** on the other device.
 
+## Six steps, one button at a time
+
+The tabs across the top are numbered in the order you plan: **1 Plan**, **2 Trips**,
+**3 Itinerary**, **4 Navigate**, **5 Weather & Roads**, **6 Budget & Booking**. Every
+step ends with a **Next** button that takes you to the following step, and a
+**Back** button. The last step ends with **Save my trip**. 50 States, Settings, and
+Feedback are always one tap away on the right.
+
 ## Save your trips
 
 The app keeps your trips on the device automatically, so they are there the next
 time you open it. To keep a trip as a file you can store, copy, or open somewhere
-else, open the **Trip** tab and tap **Save trip file**.
+else, open step **3 Itinerary** and tap **Save trip file**, or tap **Save my trip**
+at the end of step 6.
 
 | Device | Where the file goes |
 |---|---|
@@ -56,7 +65,7 @@ else, open the **Trip** tab and tap **Save trip file**.
 | Computer, in a browser | Your **Downloads** folder |
 | Computer, desktop window | A **Save** dialog opens so you choose the folder |
 
-To open it again, on the same device or a different one, use **Trip, Load trip
+To open it again, on the same device or a different one, use **3 Itinerary, Load trip
 file**. **Settings, Back up all data** saves everything at once: trips, settings,
 and states visited. The itinerary, calendar, map, and links files save the same
 way. Trip files also open in the command-line version, and its trip files open in
@@ -122,7 +131,7 @@ works: upload the `app` folder as is.
    sunset, days that do not start where the last one ended, and stops without
    coordinates.
 5. **Drive times:** real drive times from the free OSRM router, applied to every
-   arrival and departure automatically; rerun any time from **Tools** on the Trip tab.
+   arrival and departure automatically; rerun any time from **Tools** on the Itinerary page.
 6. **Navigate:** Google Maps links with every stop for each day (split automatically
    above the Google Maps app limit of 9 waypoints), Waze links for each stop (Waze
    takes one destination per link), a calendar file, My Maps CSV pins, and KML route

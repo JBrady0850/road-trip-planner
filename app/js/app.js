@@ -7,7 +7,7 @@
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.4.0";
+  const APP_VERSION = "0.4.1";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
   const ICONS = new Set(["scenic","parks","waterfalls","beach","lighthouses","fishing","water","history","food","lights","hiking","caves","town"]);
   const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
@@ -68,7 +68,7 @@
 
   function render() {
     const fn = { interview: vInterview, destinations: vDestinations, trip: vTrip, navigate: vNavigate, weather: vWeather, budget: vBudget, tracker: vTracker, settings: vSettings, feedback: vFeedback }[st.tab];
-    view.innerHTML = fn();
+    view.innerHTML = fn() + stepBar(st.tab);
     persist();
   }
 
@@ -121,6 +121,24 @@
   const scene = d => `<svg class="scene scene-${sceneKind(d)}" viewBox="0 0 320 80" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><rect class="sky" width="320" height="80"/>${SCENE[sceneKind(d)]}</svg>`;
   const experiencesList = (list, cls = "") => list && list.length ? `<div class="exp ${cls}"><p class="exp-title">Only here</p><ul>${list.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
 
+  // ---------- step bar ----------
+  // Planning runs in six steps; every step page ends with Back and Next so the way
+  // forward is always the button at the bottom.
+  const FLOW = [["interview", "Plan"], ["destinations", "Trips"], ["trip", "Itinerary"], ["navigate", "Navigate"], ["weather", "Weather & Roads"], ["budget", "Budget & Booking"]];
+  function stepBar(tab) {
+    const i = FLOW.findIndex(f => f[0] === tab); if (i < 0) return "";
+    const n = FLOW.length, prev = FLOW[i - 1], next = FLOW[i + 1], to = `<span aria-hidden="true">&rarr;</span>`;
+    let go = "";
+    if (tab === "interview") go = `<button class="btn big step-next" data-act="findDest">Next: Show me trips ${to}</button>`;
+    else if (tab === "destinations") go = (st.recs.length ? `<button class="btn big step-next" data-act="build" data-i="0">Next: Build the best match ${to}</button>` : "") + (st.trip ? `<button class="btn ghost" data-act="go" data-t="trip">Keep my current trip</button>` : "");
+    else if (!st.trip) go = `<button class="btn big step-next" data-act="go" data-t="interview">Plan a trip first</button>`;
+    else if (!next) go = `<button class="btn big step-next" data-act="saveTrip">Save my trip</button><button class="btn ghost" data-act="go" data-t="feedback">Give feedback</button>`;
+    else go = `<button class="btn big step-next" data-act="go" data-t="${next[0]}">Next: ${esc(next[1])} ${to}</button>`;
+    const back = prev ? `<button class="btn ghost step-back" data-act="go" data-t="${prev[0]}"><span aria-hidden="true">&larr;</span> Back: ${esc(prev[1])}</button>` : "";
+    const dots = FLOW.map((f, k) => `<span class="dot ${k < i ? "done" : k === i ? "on" : ""}"></span>`).join("");
+    return `<nav class="stepbar noprint" aria-label="Planning steps"><div class="step-where"><span class="step-count">Step ${i + 1} of ${n}</span><span class="step-name">${esc(FLOW[i][1])}</span><span class="dots" aria-hidden="true">${dots}</span></div><div class="step-actions">${back}${go}</div></nav>`;
+  }
+
   // ---------- interview ----------
   const chip = (act, k, label, on, extra = "") => `<button class="chip" data-act="${act}" data-k="${k}" aria-pressed="${on}" ${extra}>${icon(k)}${label}</button>`;
   function vInterview() {
@@ -165,8 +183,8 @@
       ${field("Where to", `<select data-bind="profile.destState" data-rescore="1"><option value="">Anywhere within reach</option>${RT_STATES.map(s => `<option value="${s.abbr}" ${p.destState === s.abbr ? "selected" : ""}>${s.name}</option>`).join("")}</select>`)}</div>
       <h2>What do you enjoy?</h2><p class="small muted">Three are picked already. Tap to change; more picks sharpen the ranking.</p>
       <div class="chips">${INTERESTS.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div>
-      <div class="row" style="margin:14px 0 6px"><button class="btn big" data-act="findDest">Show me trips</button><span class="small muted">Ranked for your interests, the season, and the drive from home.</span></div>
-      ${details}</div>`;
+      ${details}
+      <p class="small muted" style="margin:14px 0 0">When you are ready, tap <b>Next: Show me trips</b> below. Trips are ranked for your interests, the season, and the drive from home.</p></div>`;
   }
 
   function statesGrid(editable) {
@@ -242,7 +260,8 @@
     let n = 0;
     const status = st.busy ? `<p class="muted">${esc(st.busy)}</p>` : `<p class="small ${errs ? "lvl ERROR" : warns ? "lvl WARN" : "ok"}">${errs ? `${errs} problem${errs > 1 ? "s" : ""} to fix` : warns ? `${warns} thing${warns > 1 ? "s" : ""} to look at` : "Plan checks out"}${routed ? `; drive times checked for ${routed} of ${t.days.length} days` : "; drive times are estimates (Tools, Check drive times)"}.</p>`;
     return `<h1>${esc(t.name)}</h1>
-      ${st.tripHint ? `<div class="hint noprint"><div><b>Your trip is drafted and checked.</b> Tap <b>Edit</b> on any stop to change it, or add stops with the search box under each day. When you are ready: <b>Navigate</b> gives you the driving links, <b>Weather &amp; Roads</b> the forecast, and <b>Budget &amp; Booking</b> the costs and what to reserve.</div><button class="btn ghost small" data-act="hideTripHint">Got it</button></div>` : ""}
+      ${st.tripHint ? `<div class="hint noprint"><div><b>Your trip is drafted and checked.</b> Tap <b>Edit</b> on any stop to change it, or add a stop with the search box under each day. When it looks right, go on to the next steps, or use <b>Next</b> at the bottom of the page:
+        <div class="row" style="margin-top:8px"><button class="btn small" data-act="go" data-t="navigate">4 Navigate: driving links</button><button class="btn small ghost" data-act="go" data-t="weather">5 Weather &amp; Roads: forecast</button><button class="btn small ghost" data-act="go" data-t="budget">6 Budget &amp; Booking: costs</button></div></div><button class="btn ghost small" data-act="hideTripHint">Got it</button></div>` : ""}
       <div class="card noprint"><div class="row">
         <button class="btn" data-act="saveTrip">Save trip file</button>
         <button class="btn ghost" data-act="itinerary">Download itinerary</button>
@@ -282,9 +301,9 @@
         <button class="btn ghost" data-act="dlCsv">My Maps stops (.csv)</button>
         <button class="btn ghost" data-act="dlKml">Route layers (.kml)</button>
         <button class="btn ghost" data-act="dlLinks">Links sheet (.html)</button></div>
-        <p class="small muted">Google My Maps: create a map, import the CSV for pins, then import each day's KML as its own layer to draw the driving routes (run Route check first). The Google Maps phone app does not show My Maps routes, so use the links above on the road.</p></div>`;
+        <p class="small muted">Google My Maps: create a map, import the CSV for pins, then import each day's KML as its own layer to draw the driving routes (check drive times first: <button class="btn small ghost" data-act="routeAll">Check drive times</button>). The Google Maps phone app does not show My Maps routes, so use the links above on the road.</p></div>`;
   }
-  const noTrip = () => `<div class="card"><p>Build a trip first.</p><button class="btn" data-act="go" data-t="interview">Start the interview</button></div>`;
+  const noTrip = () => `<div class="card"><p>There is no trip yet. Plan one, then come back to this step.</p><div class="row"><button class="btn" data-act="go" data-t="interview">Plan a trip</button><label class="btn ghost">Load trip file<input type="file" accept=".json,application/json" data-act="loadTrip" hidden></label></div></div>`;
 
   // ---------- weather and roads ----------
   function vWeather() {
@@ -308,12 +327,12 @@
     return `<h1>Budget and booking</h1>
       <div class="card"><h2>Budget estimate</h2><div class="tablewrap"><table><tr><th>Category</th><th>Low</th><th>High</th><th>Basis</th></tr>
       ${b.lines.map(l => `<tr><td>${l[0]}</td><td>${money(l[1])}</td><td>${money(l[2])}</td><td class="small muted">${esc(l[3])}</td></tr>`).join("")}
-      <tr><th>Total</th><th>${money(b.total[0])}</th><th>${money(b.total[1])}</th><td class="small">${b.routed ? "routed miles" : "estimated miles; run Route check"}</td></tr></table></div>
+      <tr><th>Total</th><th>${money(b.total[0])}</th><th>${money(b.total[1])}</th><td class="small">${b.routed ? "routed miles" : `estimated miles <button class="btn small ghost" data-act="routeAll">Check drive times</button>`}</td></tr></table></div>
       <p class="${over > 0 ? "lvl WARN" : "small"}">${over > 0 ? `High estimate is ${money(over)} over your ${money(b.cap)} cap.` : `Within your ${money(b.cap)} cap.`}</p>
       <p class="small muted">Estimates only. Replace with real hotel rates and admission prices before you book.</p></div>
       <div class="card"><h2>Booking checklist</h2><p class="small muted">You book. The app never reserves or pays.</p><ul>
       ${book.map(x => x.type === "hotel" ? `<li>☐ Hotel: ${esc(x.s.name)}, night of ${U.dayLabel(x.d.date)} · ${x.s.booking_url ? `<a href="${esc(x.s.booking_url)}" target="_blank" rel="noopener">book or search</a>` : `<a href="${esc(RT.lodgingSearchUrl(st.profile.lodging.brand, x.s.address))}" target="_blank" rel="noopener">search hotels</a>`}</li>` : `<li>☐ ${esc(x.s.name)}, ${U.dayLabel(x.d.date)}${x.s.timed_entry ? ` (entry ${U.hm12(x.s.timed_entry)})` : ""} ${x.s.booking_url ? `· <a href="${esc(x.s.booking_url)}" target="_blank" rel="noopener">book</a>` : ""}</li>`).join("")}</ul>
-      <p class="small muted">Add official booking links in the Trip tab, Booking link field, for every ticket and reservation.</p></div>`;
+      <p class="small muted">To add a booking link, open the itinerary, tap <b>Edit</b> on the stop, and fill in <b>Booking link</b>. <button class="btn small ghost" data-act="go" data-t="trip">Open the itinerary</button></p></div>`;
   }
 
   // ---------- tracker ----------
@@ -453,7 +472,7 @@
     aiOpen: async () => { const notes = prompt("Describe the trip you want (places, pace, must-sees):") || ""; await aiBuild(null, notes); },
     check: () => { runCheck(); render(); },
     routeAll: async () => { const t = st.trip; let ok = 0, skip = 0; for (const d of t.days) { st.busy = `Routing ${U.dayLabel(d.date)}…`; render(); try { st.routes[d.date] = await RT.services.routeDay(d); ok++; } catch (e) { skip++; } } st.busy = ""; runCheck(); render(); toast(`Routed ${ok} day(s)${skip ? `, skipped ${skip} (missing coordinates or offline)` : ""}`); },
-    retime: () => { let n = 0; st.trip.days.forEach(d => { if (RT.retimeDay(d, st.routes[d.date])) n++; }); runCheck(); render(); toast(n ? `Re-timed ${n} day(s) from routed drive times` : "Run Route check first"); },
+    retime: () => { let n = 0; st.trip.days.forEach(d => { if (RT.retimeDay(d, st.routes[d.date])) n++; }); runCheck(); render(); toast(n ? `Re-timed ${n} day(s) from routed drive times` : "Tap Check drive times first"); },
     saveTrip: () => download(`${slug(st.trip.name)}.json`, RT.tripJson(st.trip, st.profile), "application/json"),
     clearTrip: () => { if (confirmBox("Clear the current trip?")) { st.trip = null; st.routes = {}; st.findings = []; st.weather = []; render(); } },
     print: () => window.print(),
@@ -466,7 +485,7 @@
     share: async () => { const text = linksText(); if (navigator.share) { try { await navigator.share({ title: st.trip.name, text }); return; } catch (e) { if (e.name === "AbortError") return; } } location.href = `mailto:?subject=${encodeURIComponent(st.trip.name)}&body=${encodeURIComponent(text.slice(0, 1800))}`; },
     dlIcs: () => { stampTZ(st.trip); download(`${slug(st.trip.name)}.ics`, RT.ics(st.trip), "text/calendar"); },
     dlCsv: () => download(`${slug(st.trip.name)}-mymaps.csv`, RT.csv(st.trip), "text/csv"),
-    dlKml: () => { const t = st.trip; let n = 0; const files = t.days.map((d, i) => { const r = st.routes[d.date]; if (r) n++; return { name: `${slug(t.name)}-day${i + 1}.kml`, text: RT.kmlDay(t, i, r), type: "application/vnd.google-earth.kml+xml" }; }); saveFiles(files, n ? "" : " Pins only; run Route check on the Trip tab for route lines."); },
+    dlKml: () => { const t = st.trip; let n = 0; const files = t.days.map((d, i) => { const r = st.routes[d.date]; if (r) n++; return { name: `${slug(t.name)}-day${i + 1}.kml`, text: RT.kmlDay(t, i, r), type: "application/vnd.google-earth.kml+xml" }; }); saveFiles(files, n ? "" : " Pins only; tap Check drive times (Itinerary, Tools) for route lines."); },
     dlLinks: () => download(`${slug(st.trip.name)}-links.html`, linksHtml(), "text/html"),
     weather: async () => { st.weather = []; const seen = new Set(); for (const d of st.trip.days) for (const s of d.stops) { if (s.lat == null || s.lat === "") continue; const k = `${d.date}|${(+s.lat).toFixed(2)}|${(+s.lon).toFixed(2)}`; if (seen.has(k)) continue; seen.add(k); st.busy = `Checking ${s.name}…`; try { const w = await RT.services.weatherFor(s.lat, s.lon, d.date); if (w.tz) d.tz = w.tz; st.weather.push({ day: U.dayLabel(d.date), stop: s.name, ...w }); } catch (e) { st.weather.push({ day: U.dayLabel(d.date), stop: s.name, forecast: [`UNVERIFIED: weather service unavailable (${e.message})`], alerts: [], page: RT.services.forecastPage(s.lat, s.lon) }); } render(); } st.busy = ""; runCheck(); render(); },
     markDone: () => { const v = new Set(st.profile.visited); (st.trip.states || []).forEach(s => v.add(s)); st.profile.visited = [...v]; toast("States marked visited"); render(); },
@@ -480,7 +499,7 @@
 
   async function aiBuild(dest, notes) {
     st.busy = "Asking the AI to draft an itinerary…"; setTab("trip");
-    try { const t = await RT.services.aiDraft(st.profile, dest, st.startDate, +st.nights, notes); st.trip = t; st.routes = {}; runCheck(); toast("AI draft ready. It is a draft: run Route check and verify every detail."); }
+    try { const t = await RT.services.aiDraft(st.profile, dest, st.startDate, +st.nights, notes); st.trip = t; st.routes = {}; runCheck(); render(); await routeAndRetime(); toast("AI draft ready. It is a draft: verify every detail before you book."); }
     catch (e) { toast(e.message); }
     st.busy = ""; render();
   }
