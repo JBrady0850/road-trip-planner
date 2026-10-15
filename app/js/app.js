@@ -222,7 +222,7 @@
   // ---------- settings ----------
   function vSettings() {
     const p = st.profile;
-    return `<h1>Settings</h1>
+    return `<h1>Settings</h1>${vDevices()}
       <div class="card"><h2>Optional AI itineraries</h2><p class="small muted">Your own Anthropic API key, stored only in this browser and sent only to api.anthropic.com. Usage is billed to your account.</p>
       ${field("API key", `<input type="password" data-bind="profile.aiKey" value="${esc(p.aiKey)}" autocomplete="off">`)}
       ${field("Model", `<input type="text" data-bind="profile.aiModel" value="${esc(p.aiModel)}">`)}</div>
@@ -286,6 +286,8 @@
     weather: async () => { st.weather = []; const seen = new Set(); for (const d of st.trip.days) for (const s of d.stops) { if (s.lat == null || s.lat === "") continue; const k = `${d.date}|${(+s.lat).toFixed(2)}|${(+s.lon).toFixed(2)}`; if (seen.has(k)) continue; seen.add(k); st.busy = `Checking ${s.name}…`; try { const w = await RT.services.weatherFor(s.lat, s.lon, d.date); if (w.tz) d.tz = w.tz; st.weather.push({ day: U.dayLabel(d.date), stop: s.name, ...w }); } catch (e) { st.weather.push({ day: U.dayLabel(d.date), stop: s.name, forecast: [`UNVERIFIED: weather service unavailable (${e.message})`], alerts: [], page: RT.services.forecastPage(s.lat, s.lon) }); } render(); } st.busy = ""; runCheck(); render(); },
     markDone: () => { const v = new Set(st.profile.visited); (st.trip.states || []).forEach(s => v.add(s)); st.profile.visited = [...v]; toast("States marked visited"); render(); },
     backup: () => download("road-trip-planner-backup.json", JSON.stringify({ format: "road-trip-planner-backup/1", profile: { ...st.profile, aiKey: "" }, trip: st.trip, routes: st.routes }, null, 2), "application/json"),
+    install: async () => { if (!installEvt) return; const ev = installEvt; installEvt = null; ev.prompt(); try { await ev.userChoice; } catch (e) { } showInstall(); render(); },
+    hideInstall: () => { try { localStorage.setItem(HINT, "hide"); } catch (e) { } showInstall(); toast("Install steps are in Settings any time"); },
     reset: () => { if (confirmBox("Erase all saved data in this browser?")) { try { localStorage.removeItem(KEY); } catch (e) { } location.reload(); } }
   };
   function confirmBox(msg) { return window.confirm(msg); }
@@ -313,6 +315,47 @@
 <p style="font-size:12px;color:#666">Planning only; verify hours, prices, and closures before travel. Map data © OpenStreetMap contributors.</p></body>`;
   }
 
+  // ---------- use on a tablet or phone ----------
+  const PUBLIC_URL = "https://jbrady0850.github.io/road-trip-planner/";
+  const HINT = "rtp:installHint";
+  let installEvt = null;
+  function device() {
+    const ua = navigator.userAgent || "";
+    const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const installed = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+    const hosted = /^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    return { ios, android: /Android/i.test(ua), installed, hosted };
+  }
+  function installSteps(d) {
+    if (d.installed) return `<p>Installed on this device. Open <b>Road Trips</b> from your home screen.</p>`;
+    if (installEvt) return `<p>Add it to this device for one-tap access and offline use.</p><button class="btn" data-act="install">Install app</button>`;
+    if (d.ios) return `<ol class="steps-list"><li>Open this page in <b>Safari</b>.</li><li>Tap the <b>Share</b> button (a square with an arrow pointing up). On iPad it is at the top right; on iPhone it is at the bottom.</li><li>Tap <b>Add to Home Screen</b>, then tap <b>Add</b>.</li></ol>`;
+    if (d.android) return `<ol class="steps-list"><li>Open this page in <b>Chrome</b>.</li><li>Tap the menu button (three dots) at the top right.</li><li>Tap <b>Add to Home screen</b> or <b>Install app</b>, then tap <b>Install</b>.</li></ol>`;
+    return `<p>On a computer, click the install button at the right end of the address bar in Chrome or Edge, or bookmark this page.</p>`;
+  }
+  function showInstall() {
+    const box = $("#install"), d = device();
+    let dismissed = false; try { dismissed = localStorage.getItem(HINT) === "hide"; } catch (e) { }
+    const show = !d.installed && !dismissed && d.hosted && (d.ios || d.android || installEvt);
+    box.hidden = !show;
+    box.innerHTML = show ? `<div><strong>Use it like an app.</strong> Add Road Trip Planner to your home screen so it opens full screen, works offline, and keeps your saved trips.${installSteps(d)}</div><button class="btn ghost small" data-act="hideInstall" aria-label="Hide install tips">Not now</button>` : "";
+  }
+  function vDevices() {
+    const d = device(), here = location.href.split("#")[0].split("?")[0];
+    const onPublic = d.hosted && here.startsWith(PUBLIC_URL);
+    const addr = d.hosted ? here : PUBLIC_URL;
+    const qr = !d.hosted || onPublic ? `<img class="qr" src="qr-app.png" width="160" height="160" alt="QR code for ${esc(PUBLIC_URL)}">` : "";
+    return `<div class="card"><h2>Use on a tablet or phone</h2>
+      <div class="row" style="align-items:flex-start;gap:16px">${qr}<div style="flex:1;min-width:220px">
+      <p>${d.hosted ? "This app runs from this web address. Nothing to download or set up:" : "Open the hosted app in the tablet's web browser. Nothing to download or set up:"}<br><a href="${esc(addr)}">${esc(addr)}</a></p>
+      ${qr ? `<p class="small muted">Point the tablet's camera at the code to open it.</p>` : ""}
+      <h3>Add it to the home screen</h3>${installSteps(d)}</div></div>
+      <p class="small muted">Each device keeps its own trips. To move a trip, use <b>Back up all data</b> below, then <b>Restore from file</b> on the other device. On iPad, the home-screen app and Safari keep separate copies, so plan in the home-screen app.</p></div>`;
+  }
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; showInstall(); if (st.tab === "settings") render(); });
+  window.addEventListener("appinstalled", () => { installEvt = null; showInstall(); toast("Installed. Open Road Trips from your home screen."); });
+  $("#install").addEventListener("click", e => { const el = e.target.closest("[data-act]"); if (el && actions[el.dataset.act]) { e.preventDefault(); actions[el.dataset.act](el); } });
+
   // ---------- events ----------
   view.addEventListener("click", e => { const el = e.target.closest("[data-act]"); if (el && el.tagName !== "INPUT" && actions[el.dataset.act]) { e.preventDefault(); actions[el.dataset.act](el); } });
   view.addEventListener("change", e => {
@@ -334,5 +377,6 @@
 
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
   if (st.trip) runCheck();
+  showInstall();
   setTab(st.tab);
 })();

@@ -16,12 +16,12 @@
 html, body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 a { color: var(--info); }
 button, input, select, textarea { font: inherit; color: inherit; }
-.top { position: sticky; top: 0; z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.top { position: sticky; top: 0; z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left)); display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
 .brand { display: flex; gap: 8px; align-items: center; font-weight: 700; }
-#tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+#tabs { display: flex; flex-wrap: wrap; gap: 4px; max-width: 100%; }
 #tabs button { border: 0; background: transparent; padding: 8px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; color: var(--muted); min-height: 40px; }
 #tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
-main { max-width: 1040px; margin: 0 auto; padding: 16px; }
+main { max-width: 1040px; margin: 0 auto; padding: 16px 16px max(16px, env(safe-area-inset-bottom)); }
 h1 { font-size: 1.5rem; margin: 4px 0 12px; } h2 { font-size: 1.2rem; margin: 18px 0 8px; } h3 { font-size: 1.05rem; margin: 12px 0 6px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); margin-bottom: 12px; }
 .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
@@ -64,5 +64,11 @@ th, td { text-align: left; padding: 6px; border-bottom: 1px solid var(--line); v
 .results { max-height: 220px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
 .results button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: var(--panel); padding: 8px; cursor: pointer; }
 .pad { padding: 16px; }
-@media print { .top, .noprint, #toast { display: none !important; } body { background: #fff; color: #000; } .card { box-shadow: none; break-inside: avoid; } }
+.install { margin: 12px max(16px, calc((100% - 1008px) / 2)) 0; padding: 12px 14px; background: var(--panel); border: 1px solid var(--accent-2); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.install[hidden] { display: none; }
+.install .btn.ghost { white-space: nowrap; }
+main:focus { outline: none; }
+.steps-list { margin: 6px 0 0; padding-left: 1.4em; } .steps-list li { margin: 4px 0; }
+.qr { width: 160px; height: 160px; image-rendering: pixelated; background: #fff; border-radius: 8px; padding: 6px; }
+@media print { .install, .top, .noprint, #toast { display: none !important; } body { background: #fff; color: #000; } .card { box-shadow: none; break-inside: avoid; } }
 @media (max-width: 600px) { main { padding: 12px; } .stop { grid-template-columns: 28px 1fr; } }

@@ -8,6 +8,11 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Road Trips">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Free road trip planner: interview, destinations, itinerary, navigation links, weather, budget, and a 50-state tracker.">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -24,6 +29,7 @@
     <button data-tab="settings" role="tab">Settings</button>
   </nav>
 </header>
+<div id="install" class="install" role="region" aria-label="Install this app" hidden></div>
 <main id="view" tabindex="-1"></main>
 <div id="toast" role="status" aria-live="polite"></div>
 <noscript><p class="pad">This app needs JavaScript turned on.</p></noscript>

@@ -8,6 +8,37 @@ weather and road links, a budget, a booking checklist, and a 50-state tracker.
 
 It runs on a computer or a tablet. Your data stays on your device.
 
+## Open the app (no download)
+
+### [jbrady0850.github.io/road-trip-planner](https://jbrady0850.github.io/road-trip-planner/)
+
+Tap the link on an iPad, Android tablet, phone, or computer. It opens in the web
+browser. Nothing to download, install, or set up, and no account.
+
+<img src="docs/images/open-app-qr.png" width="160" alt="QR code that opens the app">
+
+Reading this on a computer? Point your tablet's camera at the code to open the app
+there.
+
+### Put it on your home screen (recommended on a tablet)
+
+| iPad | Android tablet |
+|---|---|
+| 1. Open the link in **Safari**. | 1. Open the link in **Chrome**. |
+| 2. Tap **Share** (the square with an arrow pointing up, top right). | 2. Tap **Install app** if the app offers it, or tap the menu (three dots, top right). |
+| 3. Tap **Add to Home Screen**, then **Add**. | 3. Tap **Add to Home screen** or **Install app**, then **Install**. |
+
+Then open **Road Trips** from the home screen. It opens full screen like any other
+app, keeps your saved trips, and still opens without a connection after the first
+visit. Live weather, routing, and place search need a connection. The app shows
+these same steps the first time you open it on a tablet, and again under
+**Settings**.
+
+![Install steps on an iPad](docs/images/09-tablet-install.png)
+
+Each device keeps its own trips. To move a trip to another device, use
+**Settings, Back up all data**, then **Restore from file** on the other device.
+
 ## See it
 
 Screenshots use a sample traveler from Knoxville, TN; weather shown is sample data.
@@ -19,7 +50,10 @@ Screenshots use a sample traveler from Knoxville, TN; weather shown is sample da
 | **5. Weather and roads.** National Weather Service forecasts and alerts, plus official state road-condition pages. ![Weather and roads](docs/images/05-weather-roads.png) | **6. Budget and booking.** Estimate against your cap and a checklist with booking links. ![Budget and booking](docs/images/06-budget-booking.png) |
 | **7. 50-state tracker.** Tap states visited; the current trip is outlined. ![50-state tracker](docs/images/07-tracker.png) | **8. Tablet.** The same app on an iPad or Android tablet, added to the home screen. ![Tablet](docs/images/08-tablet.png) |
 
-## Start it
+## Run it from a download (optional)
+
+The link above is all most people need. To run a copy from your own computer
+instead:
 
 | Device | How |
 |---|---|
@@ -27,18 +61,16 @@ Screenshots use a sample traveler from Knoxville, TN; weather shown is sample da
 | Mac | Double-click `Start-Mac.command` (first time: right-click, Open) |
 | Linux | Run `./start-linux.sh` |
 | Any computer without Python | Open `app/index.html` in Chrome, Edge, Firefox, or Safari |
-| iPad or Android tablet | Open the hosted copy (see below), then Share, Add to Home Screen |
+| iPad, Android tablet, or phone | Open the link above; no download needed |
 
 The start scripts use Python 3.9 or newer (standard library only) to run the app on
 `http://127.0.0.1` on your own computer. With the optional `pywebview` package
 (`pip install pywebview`) it opens in its own window instead of your browser.
 
-**Tablets** cannot run files from a download folder, so host the `app` folder on
-any static web host. This repository includes a GitHub Pages workflow
-(`.github/workflows/pages.yml`) that publishes `app/`: fork the repository, open
-Settings, Pages, and set Source to "GitHub Actions". Open the Pages address on the
-tablet and add it to the home screen; after the first visit the app shell works
-offline.
+**Host your own copy:** fork this repository, open Settings, Pages, and set
+Source to "GitHub Actions". The included workflow (`.github/workflows/pages.yml`)
+publishes the `app` folder to your own web address. Any static web host also
+works: upload the `app` folder as is.
 
 ## What it does
 
@@ -104,6 +136,7 @@ ROADTRIP_NWS_USER_AGENT="(my-roadtrip, me@example.com)" python -m roadtrip weath
 ```
 python -m pytest -q          # engine unit tests
 python tests/ui_smoke.py     # full app flow in headless Chromium (pip install playwright)
+python tests/tablet_smoke.py # iPad and Android install steps, icons, and layout
 ```
 
 ## Data sources and credits
