@@ -52,6 +52,11 @@ step ends with a **Next** button that takes you to the following step, and a
 **Back** button. The last step ends with **Save my trip**. **Cruise Day**, 50 States,
 Settings, and Feedback are always one tap away on the right.
 
+Going ashore from a cruise ship? On step 1, set **Where to** to **Cruise port (one
+day ashore)**. The step then asks for the port and the ship's times instead of your
+home town and nights away, and step 2 shows the port-day plans in place of ranked
+trips.
+
 ## Save your trips
 
 The app keeps your trips on the device automatically, so they are there the next
@@ -83,7 +88,7 @@ Screenshots use a sample traveler from Knoxville, TN; weather shown is sample da
 | **5. Weather and roads.** National Weather Service forecasts and alerts, plus official state road-condition pages. ![Weather and roads](docs/images/05-weather-roads.png) | **6. Budget and booking.** Estimate against your cap and a checklist with booking links. ![Budget and booking](docs/images/06-budget-booking.png) |
 | **7. 50-state tracker.** Tap states visited; the current trip is outlined. ![50-state tracker](docs/images/07-tracker.png) | **8. Tablet.** The same app on an iPad or Android tablet, added to the home screen. ![Tablet](docs/images/08-tablet.png) |
 | **9. Give feedback.** Testers answer a few questions; one tap fills in the GitHub form, or saves the answers as a file. ![Feedback](docs/images/10-feedback.png) | **10. Know the town?** Type it in City; that trip comes first, and the rest of the state follows, ranked. ![City first](docs/images/11-city.png) |
-| **11. A day in port.** Pick the port and the ship's times; compare a cruise excursion, a private driver, and a rental car. ![Cruise Day](docs/images/12-cruise.png) | |
+| **11. A day in port.** Pick the port and the ship's times; compare a cruise excursion, a private driver, and a rental car. ![Cruise Day](docs/images/12-cruise.png) | **12. Start from a port.** On step 1, Where to takes a cruise port; the port and the ship's times replace home and nights. ![Cruise port on the Plan step](docs/images/13-cruise-plan.png) |
 
 ## Run it from a download (optional)
 
@@ -164,7 +169,8 @@ works: upload the `app` folder as is.
 8. **Budget and booking:** lodging, fuel, food, attractions, and contingency against
    your cap, plus a booking checklist with lodging search links (and fishing license
    links when you fish). You book; the app never reserves or pays.
-9. **Cruise port days:** the **Cruise Day** tab plans one day in port. Pick a port from
+9. **Cruise port days:** pick **Cruise port** in Where to on step 1, or open the
+   **Cruise Day** tab, to plan one day in port. Pick a port from
    40 (Caribbean, Mexico, Alaska, Hawaii, Canada and New England, and US homeports),
    or type any port or town. Enter when the ship arrives and leaves; the app allows
    15 minutes to get off the ship, extra time for tender boats, and an all-aboard

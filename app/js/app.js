@@ -6,7 +6,7 @@
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.6.1";
+  const APP_VERSION = "0.6.2";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
   const ICONS = new Set(RT.INTERESTS.map(i => i[0]));
   const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" || k === "pin" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
@@ -141,14 +141,17 @@
     const i = FLOW.findIndex(f => f[0] === tab); if (i < 0) return "";
     const n = FLOW.length, prev = FLOW[i - 1], next = FLOW[i + 1], to = `<span aria-hidden="true">&rarr;</span>`;
     let go = "";
-    if (tab === "interview") go = `<button class="btn big step-next" data-act="findDest">Next: Show me trips ${to}</button>`;
+    const cruising = st.profile.cruise.on;
+    if (tab === "interview") go = cruising ? `<button class="btn big step-next" data-act="findPorts">Next: Show me port plans ${to}</button>` : `<button class="btn big step-next" data-act="findDest">Next: Show me trips ${to}</button>`;
+    else if (tab === "destinations" && cruising) { const port = cruisePort(), first = port ? RT.portDay(st.profile, port, cruiseOpts()).plans[0] : null;
+      go = (first ? `<button class="btn big step-next" data-act="cruiseUse" data-plan="${first.key}">Next: Build the itinerary (${esc(first.label.toLowerCase())}) ${to}</button>` : "") + (st.trip ? `<button class="btn ghost" data-act="go" data-t="trip">Keep my current trip</button>` : ""); }
     else if (tab === "destinations") go = (st.recs.length ? `<button class="btn big step-next" data-act="build" data-i="0">${st.recs[0].pick ? `Next: Build the ${esc(st.recs[0].dest.name)} trip` : "Next: Build the best match"} ${to}</button>` : "") + (st.trip ? `<button class="btn ghost" data-act="go" data-t="trip">Keep my current trip</button>` : "");
     else if (!st.trip) go = `<button class="btn big step-next" data-act="go" data-t="interview">Plan a trip first</button>`;
     else if (!next) go = `<button class="btn big step-next" data-act="saveTrip">Save my trip</button><button class="btn ghost" data-act="go" data-t="feedback">Give feedback</button>`;
     else go = `<button class="btn big step-next" data-act="go" data-t="${next[0]}">Next: ${esc(next[1])} ${to}</button>`;
     const back = prev ? `<button class="btn ghost step-back" data-act="go" data-t="${prev[0]}"><span aria-hidden="true">&larr;</span> Back: ${esc(prev[1])}</button>` : "";
     const dots = FLOW.map((f, k) => `<span class="dot ${k < i ? "done" : k === i ? "on" : ""}"></span>`).join("");
-    return `<nav class="stepbar noprint" aria-label="Planning steps"><div class="step-where"><span class="step-count">Step ${i + 1} of ${n}</span><span class="step-name">${esc(FLOW[i][1])}</span><span class="dots" aria-hidden="true">${dots}</span></div><div class="step-actions">${back}${go}</div></nav>`;
+    return `<nav class="stepbar noprint" aria-label="Planning steps"><div class="step-where"><span class="step-count">Step ${i + 1} of ${n}</span><span class="step-name">${esc(cruising && tab === "destinations" ? "Port plans" : FLOW[i][1])}</span><span class="dots" aria-hidden="true">${dots}</span></div><div class="step-actions">${back}${go}</div></nav>`;
   }
 
   // ---------- cruise port day ----------
@@ -197,21 +200,27 @@
       <p class="small muted">Times, prices, and whether a ship docks or anchors are estimates: confirm each on your ship's daily schedule. Place hours and fees change.</p></div>
       ${d.plans.length ? `<div class="plan-grid">${cards}</div>` : ""}`;
   }
-  function vCruise() {
-    const p = st.profile, c = p.cruise, regions = [...new Set(RT_PORTS.map(x => x.region))];
+  // Port, ship times, and line: the same fields on the Cruise Day tab and on the Plan
+  // step when Where to is "Cruise port".
+  function cruiseFields(c) {
+    const regions = [...new Set(RT_PORTS.map(x => x.region))];
     const ports = regions.map(r => `<optgroup label="${esc(r)}">${RT_PORTS.filter(x => x.region === r).map(x => `<option value="${esc(x.id)}" ${c.portId === x.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</optgroup>`).join("");
     const lines = ["", ...RT.CRUISE_LINES.map(l => l[0])].map(l => `<option value="${esc(l)}" ${c.line === l ? "selected" : ""}>${l || "Not sure or other"}</option>`).join("");
     const buf = [30, 45, 60, 90].map(m => `<option value="${m}" ${+c.buffer === m ? "selected" : ""}>${m} minutes</option>`).join("");
-    return `<h1>Cruise port day</h1>
-      <div class="card"><p class="muted">Give your port and the ship's times. The app fits places between getting off the ship and the all-aboard time, three ways: a cruise-line excursion, a private driver or taxi, or a rental car.</p>
-        <div class="row">${field("Port", `<select data-bind="profile.cruise.portId" data-rescore="1"><option value="">Not listed: type it on the right</option>${ports}</select>`)}
+    return `<div class="row">${field("Port", `<select data-bind="profile.cruise.portId" data-rescore="1"><option value="">Not listed: type it on the right</option>${ports}</select>`)}
         ${field("Port not listed? Type the port or town", `<div class="row"><input type="text" data-bind="profile.cruise.typed" value="${esc(c.typed)}" placeholder="e.g. Charlottetown" autocomplete="off" enterkeyhint="go"><button class="btn" data-act="cruiseFind">Find</button></div>`)}</div>
         <div class="row">${field("Port date", `<input type="date" data-bind="profile.cruise.date" data-rescore="1" value="${esc(cruiseDate())}">`)}
         ${field("Ship arrives", `<input type="time" data-bind="profile.cruise.arrive" data-rescore="1" value="${esc(c.arrive)}">`)}
         ${field("Ship leaves", `<input type="time" data-bind="profile.cruise.depart" data-rescore="1" value="${esc(c.depart)}">`)}
         ${field("All aboard before departure", `<select data-bind="profile.cruise.buffer" data-rescore="1">${buf}</select>`)}
         ${field("Cruise line", `<select data-bind="profile.cruise.line" data-rescore="1">${lines}</select>`)}</div>
-        <p class="small muted">Use the times on your ship's daily schedule. Most ships want everyone aboard 30 to 60 minutes before they leave.</p>
+        <p class="small muted">Use the times on your ship's daily schedule. Most ships want everyone aboard 30 to 60 minutes before they leave.</p>`;
+  }
+  function vCruise() {
+    const p = st.profile, c = p.cruise;
+    return `<h1>Cruise port day</h1>
+      <div class="card"><p class="muted">Give your port and the ship's times. The app fits places between getting off the ship and the all-aboard time, three ways: a cruise-line excursion, a private driver or taxi, or a rental car.</p>
+        ${cruiseFields(c)}
         <h2>What do you enjoy?</h2>${interestChips(p, false)}</div>
       <div id="cruiseOut" aria-live="polite">${cruiseOut()}</div>`;
   }
@@ -226,7 +235,7 @@
     if ((c.typed || "").trim() !== q || c.portId) return; // changed while the map answered: ignore this answer
     if (r) { const ab = r.state && RT_STATE_BY_NAME[r.state.toLowerCase()]; c.place = { q, label: [r.label.split(",")[0].trim(), ab ? ab.abbr : (r.state || r.country)].filter(Boolean).join(", "), lat: r.lat, lon: r.lon, abbr: ab ? ab.abbr : "" }; }
     else { c.place = { q, missing: true }; toast(failed ? `Could not look up ${q} right now. Check the connection and try again.` : `Could not find ${q}. Check the spelling, or pick a port from the list.`); }
-    if (st.tab === "cruise") render(); else persist();
+    if (["cruise", "interview", "destinations"].includes(st.tab)) render(); else persist();
   }
 
   // ---------- interview ----------
@@ -238,9 +247,9 @@
   function whereTo(p, id) {
     const stName = p.destState ? (RT_STATE_BY_ABBR[p.destState] || {}).name || p.destState : "";
     const lab = (f, text, inner) => `<div class="field"><label for="${id}-${f}">${text}</label>${inner}</div>`;
-    return `<div class="row where" role="group" aria-label="Where to">${lab("state", "Where to", `<select id="${id}-state" data-bind="profile.destState" data-rescore="1"><option value="">Anywhere within reach</option>${RT_STATES.map(s => `<option value="${s.abbr}" ${p.destState === s.abbr ? "selected" : ""}>${s.name}</option>`).join("")}</select>`)}
-      ${lab("city", "City (optional)", `<input type="text" id="${id}-city" list="${id}" data-bind="profile.destCity" data-city="1" value="${esc(p.destCity || "")}" placeholder="${stName ? `Any city in ${esc(stName)}` : "Any city, e.g. Gatlinburg"}" autocomplete="off" enterkeyhint="go" aria-describedby="${id}-help"><datalist id="${id}">${cityOptions(p.destState)}</datalist>`)}</div>
-      <p class="small muted" id="${id}-help">Know the town? Type it, and that trip comes first. Leave it blank to see the best cities for your interests.</p>`;
+    return `<div class="row where" role="group" aria-label="Where to">${lab("state", "Where to", `<select id="${id}-state" data-bind="profile.destState" data-where="1"><option value="">Anywhere within reach</option><option value="@cruise" ${p.cruise.on ? "selected" : ""}>Cruise port (one day ashore)</option>${RT_STATES.map(s => `<option value="${s.abbr}" ${!p.cruise.on && p.destState === s.abbr ? "selected" : ""}>${s.name}</option>`).join("")}</select>`)}
+      ${p.cruise.on ? "</div>" : ""}${p.cruise.on ? "" : lab("city", "City (optional)", `<input type="text" id="${id}-city" list="${id}" data-bind="profile.destCity" data-city="1" value="${esc(p.destCity || "")}" placeholder="${stName ? `Any city in ${esc(stName)}` : "Any city, e.g. Gatlinburg"}" autocomplete="off" enterkeyhint="go" aria-describedby="${id}-help"><datalist id="${id}">${cityOptions(p.destState)}</datalist>`)}${p.cruise.on ? "" : `</div>
+      <p class="small muted" id="${id}-help">Know the town? Type it, and that trip comes first. Leave it blank to see the best cities for your interests.</p>`}`;
   }
   function vInterview() {
     const p = st.profile, pace = p.rules.pace || "balanced", comfort = p.lodging.comfort || "mid";
@@ -276,6 +285,13 @@
       ${field("Food per day ($)", num("profile.dining.foodPerDay", p.dining.foodPerDay, 'min="0"'))}
       ${field("Trip budget cap, all-in ($)", num("profile.rules.budgetCap", p.rules.budgetCap, 'min="0" step="50"'))}</div>
     </details>`;
+    if (p.cruise.on) return `${hero()}<div class="card">
+      <h2>Where to?</h2>${whereTo(p, "cityList")}
+      <h2>Your port and the ship's times</h2>${cruiseFields(p.cruise)}
+      <h2>What do you enjoy?</h2><p class="small muted">Three are picked already. Tap to change; more picks sharpen the plans.</p>
+      ${interestChips(p, false)}
+      ${details}
+      <p class="small muted" style="margin:14px 0 0">When you are ready, tap <b>Next: Show me port plans</b> below. Places are fitted between getting off the ship and all aboard, three ways: a cruise excursion, a private driver, or a rental car.</p></div>`;
     return `${hero()}<div class="card">
       <h2>Where are you starting from?</h2>${home}
       <h2>When, where, and for how long?</h2>
@@ -295,6 +311,7 @@
 
   // ---------- destinations ----------
   function vDestinations() {
+    if (st.profile.cruise.on) return vPortPlans();
     const p = st.profile, state = p.destState || "";
     if (!st.recs.length) st.recs = RT.rankWithPick(p, RT_CATALOG, st.month || +st.startDate.slice(5, 7), +st.nights, state, pickDest());
     const ai = !!p.aiKey, stName = state ? (RT_STATE_BY_ABBR[state] || {}).name || state : "";
@@ -325,6 +342,14 @@
         ${statesGrid(true)}</details>
       ${shown.length ? `<div class="grid">${shown.map(card).join("")}</div>` : `<div class="card"><p>No catalog city in ${esc(stName)} yet. Type a town in City, pick "Anywhere within reach", or add one (see docs/CATALOG.md in the project).</p></div>`}
       ${!ai ? `<p class="small muted">Optional: AI-written itineraries need your own Anthropic API key. <button class="btn small ghost" data-act="go" data-t="settings">Set it up in Settings</button></p>` : ""}`;
+  }
+  // Step 2 when Where to is "Cruise port": the three port-day plans side by side.
+  function vPortPlans() {
+    const p = st.profile, port = cruisePort();
+    return `<div class="pagehead">${icon("route", "ico big")}<h1>${port ? `Port plans: ${esc(port.name)}` : "Port plans"}</h1></div>
+      <p class="muted">Three ways to spend the day ashore, fitted to your interests and the ship's times. Pick one to build the itinerary. <button class="btn small ghost" data-act="startOver">Change my answers</button></p>
+      <details class="more noprint"><summary>Your interests</summary><p class="small muted">Tap to change; the plans update.</p>${interestChips(p, false)}</details>
+      <div id="cruiseOut" aria-live="polite">${cruiseOut()}</div>`;
   }
   // The traveler's own pick from the City field: a catalog trip, a looked-up town, or
   // none. A saved pick counts only while City and Where to still say what it was for.
@@ -605,12 +630,19 @@
       try { home = await RT.services.reverse(pos.lat, pos.lon); } catch (e) { /* keep the coordinates; the town name is a nicety */ }
       setHome(home);
     },
-    interest: el => { const k = el.dataset.k, a = st.profile.interests; const i = a.indexOf(k); i >= 0 ? a.splice(i, 1) : a.push(k); el.setAttribute("aria-pressed", String(i < 0)); st.recs = []; if (st.tab === "destinations") render(); else if (st.tab === "cruise") { $("#cruiseOut").innerHTML = cruiseOut(); persist(); } else { const box = $("#fishPlan"); if (box) box.innerHTML = fishPlan(st.profile); persist(); } },
+    interest: el => { const k = el.dataset.k, a = st.profile.interests; const i = a.indexOf(k); i >= 0 ? a.splice(i, 1) : a.push(k); el.setAttribute("aria-pressed", String(i < 0)); st.recs = []; if (st.tab === "destinations" && !st.profile.cruise.on) render(); else if ($("#cruiseOut")) { $("#cruiseOut").innerHTML = cruiseOut(); persist(); } else { const box = $("#fishPlan"); if (box) box.innerHTML = fishPlan(st.profile); persist(); } },
     pace: el => { RT.applyPace(st.profile, el.dataset.k); st.details = true; st.recs = []; render(); toast(`${RT.PACE[el.dataset.k].label} pace set`); },
     comfort: el => { RT.applyComfort(st.profile, el.dataset.k, +st.nights); st.details = true; render(); toast(`${RT.COMFORT[el.dataset.k].label}: budget cap now ${money(st.profile.rules.budgetCap)}`); },
     toggleState: el => { const a = st.profile.visited, s = el.dataset.s, i = a.indexOf(s); i >= 0 ? a.splice(i, 1) : a.push(s); st.recs = []; render(); },
     findDest: async () => { const f = $("[data-bind='profile.destCity']"); if (f) st.profile.destCity = f.value; if (st.profile.home.lat == null) { toast("Tell the app where you start: type your town or tap Use my location"); const q = $("#homeQ"); if (q) q.focus(); return; } st.recs = []; await resolveCity(); setTab("destinations"); },
     startOver: () => { st.recs = []; setTab("interview"); },
+    findPorts: async () => {
+      const c = st.profile.cruise, f = $("[data-bind='profile.cruise.typed']"); if (f) c.typed = f.value;
+      const typed = (c.typed || "").trim();
+      if (!c.portId && typed && !(c.place && c.place.q === typed)) await cruiseFind();
+      if (!cruisePort()) { if (!(c.place && c.place.missing)) toast("Pick your port from the list, or type it and tap Find"); return; }
+      setTab("destinations");
+    },
     cruiseFind: () => cruiseFind(),
     cruiseUse: el => {
       const port = cruisePort(); if (!port) return;
@@ -732,7 +764,9 @@ ${fishingOn() && fishLinks(t.states || []) ? `<h2>Fishing licenses</h2><p>Buy on
   view.addEventListener("change", e => {
     fbInput(e);
     const el = e.target;
-    if (el.dataset.bind) { let v = el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value === "" ? 0 : +el.value) : el.value; if (el.dataset.bind === "month") v = v ? +v : null; setPath(el.dataset.bind, v); if (el.dataset.rescore || el.dataset.bind === "startDate" || el.dataset.bind === "nights") st.recs = [];
+    if (el.dataset.where) { const cruise = el.value === "@cruise"; st.profile.cruise.on = cruise; if (!cruise) st.profile.destState = el.value; st.recs = [];
+      if (!cruise && st.tab === "destinations" && cityNow()) { render(); resolveCity().then(() => { if (st.tab === "destinations") render(); }); } else render(); }
+    if (el.dataset.bind && !el.dataset.where) { let v = el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value === "" ? 0 : +el.value) : el.value; if (el.dataset.bind === "month") v = v ? +v : null; setPath(el.dataset.bind, v); if (el.dataset.rescore || el.dataset.bind === "startDate" || el.dataset.bind === "nights") st.recs = [];
       if (el.dataset.city || (el.dataset.bind === "profile.destState" && cityNow())) { st.recs = []; if (st.tab === "destinations") { render(); resolveCity().then(() => { if (st.tab === "destinations") render(); }); } else if (el.dataset.city) persist(); else render(); }
       else if (el.dataset.rescore) render(); else persist(); }
     if (el.dataset.tripbind) { const ks = el.dataset.tripbind.split("."); const last = ks.pop(); const o = ks.reduce((x, k) => x[k], st.trip); o[last] = el.type === "checkbox" ? el.checked : el.value; if (ks[0] === "days") delete st.routes[st.trip.days[+ks[1]].date]; persist(); }

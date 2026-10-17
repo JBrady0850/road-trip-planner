@@ -116,6 +116,12 @@ def main():
             page.dispatch_event("[data-bind='profile.cruise.line']", "change")
             page.evaluate("window.scrollTo(0, document.querySelector('#cruiseOut').getBoundingClientRect().top + window.scrollY - 90)")
             shot("12-cruise")
+            # A cruise port chosen in Where to on the first Plan step
+            page.click("#tabs [data-tab=interview]")
+            page.select_option("#cityList-state", "@cruise")
+            page.evaluate("window.scrollTo(0, document.querySelector('#cityList-state').getBoundingClientRect().top + window.scrollY - 140)")
+            shot("13-cruise-plan")
+            page.select_option("#cityList-state", "")
             ctx.close()
 
         # tablet, portrait

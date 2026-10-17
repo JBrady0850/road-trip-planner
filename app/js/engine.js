@@ -23,7 +23,7 @@
     rules: { maxDriveHours: 7, budgetCap: 1500, walkMiles: 5, nightsMin: 3, nightsMax: 7, checkinTarget: "15:00", checkinWindow: 60, ticketMargin: 30, arriveBeforeSunset: true, startTime: "08:30", stopsPerDay: 3, pace: "balanced" },
     lodging: { brand: "Any", nightlyLow: 120, nightlyHigh: 180, freeBreakfast: true, comfort: "mid" },
     dining: { diet: "No restriction", upscaleDinners: 1, lunchCap: 30, foodPerDay: 55 },
-    interests: ["scenic", "parks", "food"], months: [], flyOk: false, visited: [], destState: "", destCity: "", destPlace: null, cruise: { portId: "", typed: "", place: null, date: "", arrive: "08:00", depart: "17:00", buffer: 30, line: "" }, aiKey: "", aiModel: "claude-sonnet-5-5"
+    interests: ["scenic", "parks", "food"], months: [], flyOk: false, visited: [], destState: "", destCity: "", destPlace: null, cruise: { on: false, portId: "", typed: "", place: null, date: "", arrive: "08:00", depart: "17:00", buffer: 30, line: "" }, aiKey: "", aiModel: "claude-sonnet-5-5"
   });
 
   // ---------- presets ----------
