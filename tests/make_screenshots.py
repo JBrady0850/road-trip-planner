@@ -135,6 +135,23 @@ def main():
         page.add_style_tag(content="#toast{display:none!important}")
         page.screenshot(path=str(OUT / "08-tablet.png"))
         ctx.close()
+
+        # iPad install steps: the tip shows only on a hosted address, so serve the app
+        # under a stand-in https name and present an iPad browser.
+        ctx = b.new_context(viewport={"width": 834, "height": 1194}, device_scale_factor=1, has_touch=True,
+                            user_agent="Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1")
+        page = ctx.new_page()
+        app_dir = ROOT / "app"
+        def serve(route):
+            rel = route.request.url.split("rtp.example/", 1)[1].split("?")[0] or "index.html"
+            f = app_dir / rel
+            route.fulfill(path=str(f)) if f.is_file() else route.fulfill(status=404)
+        page.route("https://rtp.example/**", serve)
+        page.goto("https://rtp.example/index.html")
+        page.wait_for_selector("#install:not([hidden])")
+        page.add_style_tag(content="#toast{display:none!important}")
+        page.screenshot(path=str(OUT / "09-tablet-install.png"))
+        ctx.close()
         b.close()
     print("\n".join(sorted(str(f.relative_to(ROOT)) for f in OUT.glob("*.png"))))
 

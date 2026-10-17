@@ -195,6 +195,20 @@ def test_the_cruise_tab_shows_three_plans_with_links(page):
     assert "estimate" in text.lower()
 
 
+def test_viator_and_getyourguide_links_use_the_checked_search_address(page):
+    # Search address format opened in a browser on 2026-10-17 for Cozumel and Skagway.
+    links = page.evaluate("""() => RT.portLinks(RT_PORTS.find(x => x.id === "skagway"), "")""")
+    assert links["tours"] == [
+        {"label": "Viator", "url": "https://www.viator.com/searchResults/all?text=Skagway%20shore%20excursions"},
+        {"label": "GetYourGuide", "url": "https://www.getyourguide.com/s/?q=Skagway%20shore%20excursions"},
+    ]
+    open_cruise(page)
+    for plan, n in (("excursion", 1), ("driver", 1), ("rental", 0)):
+        hrefs = page.eval_on_selector_all(f"#cruiseOut [data-plan={plan}] a", "as => as.map(a => a.href)")
+        assert sum("viator.com/searchResults" in h for h in hrefs) == n, (plan, hrefs)
+        assert sum("getyourguide.com/s/?q=" in h for h in hrefs) == n, (plan, hrefs)
+
+
 def test_the_cruise_tab_uses_the_same_interest_chips(page):
     open_cruise(page)
     keys = set(page.eval_on_selector_all("#view [data-act=interest]", "es => es.map(e => e.dataset.k)"))

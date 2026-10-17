@@ -6,7 +6,7 @@
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.6.0";
+  const APP_VERSION = "0.6.1";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
   const ICONS = new Set(RT.INTERESTS.map(i => i[0]));
   const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" || k === "pin" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
@@ -167,7 +167,7 @@
   const cruiseOpts = () => { const c = st.profile.cruise; return { arrive: c.arrive, depart: c.depart, buffer: +c.buffer, line: c.line }; };
   const cruiseDate = () => st.profile.cruise.date || st.startDate;
   const planBlurb = {
-    excursion: "Book through the cruise line. The line times the return to the ship; ask it what happens if a tour runs late.",
+    excursion: "Book through the cruise line. The line times the return to the ship; ask it what happens if a tour runs late. Viator and GetYourGuide tours are independent: the ship does not wait for them.",
     driver: "A taxi or hired driver takes you to each place and waits. Agree the price and the return time before you leave the pier.",
     rental: "You drive yourself. Allow time to pick up and return the car, and to park at each place."
   };
@@ -184,8 +184,9 @@
     const cards = d.plans.map(pl => {
       const cost = pl.cost ? `<p class="small cost">Rough estimate: ${money(pl.cost[0])} to ${money(pl.cost[1])}${pl.key === "driver" ? " for the vehicle" : " for the day, with fuel and parking"}. Prices vary: confirm before you go.</p>` : `<p class="small cost">Price: see the cruise line's page.</p>`;
       const stops = pl.stops.map(s => `<li><b>${U.hm12(s.arrive)}</b> ${esc(s.name)} <span class="small muted">(${s.minutes} min)</span></li>`).join("");
-      const lk = pl.key === "excursion" ? `${links.lines.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a></li>`).join("")}<li><a href="${esc(links.lineSearch)}" target="_blank" rel="noopener">Search ${esc(port.name)} excursions on the web</a></li><li><a href="${esc(links.independent)}" target="_blank" rel="noopener">Independent local tours (web search)</a></li>`
-        : pl.key === "driver" ? `<li><a href="${esc(links.taxi)}" target="_blank" rel="noopener">Taxi and private drivers near the pier (map)</a></li><li><a href="${esc(links.independent)}" target="_blank" rel="noopener">Private tours for cruise passengers (web search)</a></li>`
+      const tourLinks = links.tours.map(t => `<li><a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.label)}: ${esc(port.name)} tours (independent sellers)</a></li>`).join("");
+      const lk = pl.key === "excursion" ? `${links.lines.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a></li>`).join("")}<li><a href="${esc(links.lineSearch)}" target="_blank" rel="noopener">Search ${esc(port.name)} excursions on the web</a></li><li><a href="${esc(links.independent)}" target="_blank" rel="noopener">Independent local tours (web search)</a></li>${tourLinks}`
+        : pl.key === "driver" ? `<li><a href="${esc(links.taxi)}" target="_blank" rel="noopener">Taxi and private drivers near the pier (map)</a></li><li><a href="${esc(links.independent)}" target="_blank" rel="noopener">Private tours for cruise passengers (web search)</a></li>${tourLinks}`
         : `<li><a href="${esc(links.rental)}" target="_blank" rel="noopener">Car rental near the pier (map)</a></li>`;
       return `<div class="card plan-card" data-plan="${pl.key}"><h3>${esc(pl.label)}</h3><p class="small muted">${esc(planBlurb[pl.key])}</p>
         <p class="small">Back at the pier about <b>${U.hm12(pl.backAboard)}</b> (${pl.spareMin} min to spare).</p>

@@ -171,7 +171,8 @@ works: upload the `app` folder as is.
    buffer you choose (30 to 90 minutes). It fits places that match the same 24
    interests between those times, three ways side by side: a **cruise excursion**
    (links to the shore excursion pages of nine cruise lines, plus web searches), a
-   **private driver or taxi**, and a **rental car**. Each plan shows when you are
+   **private driver or taxi** (with Viator and GetYourGuide searches for the port),
+   and a **rental car**. Each plan shows when you are
    back at the pier and how many minutes you have to spare, with rough price
    estimates. **Use this plan as my itinerary** turns it into a one-day trip that
    works with Navigate and the saved itinerary. The app does not book anything, and

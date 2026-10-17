@@ -348,7 +348,7 @@ Each state's page was found by a separate research pass and then opened again fr
 
 ## Cruise Day: ports, excursion pages, and tender ports (2026-10-17)
 
-Shore excursion pages were opened on 2026-10-17 with a page reader. The reader does not report redirects, so the address a visitor finally lands on is UNVERIFIED. Viator and GetYourGuide blocked the reader (robots rules), so the app links only to the nine cruise lines below and to web and map searches.
+Shore excursion pages were opened on 2026-10-17 with a page reader. The reader does not report redirects, so the address a visitor finally lands on is UNVERIFIED. Viator and GetYourGuide blocked the reader (robots rules). On 2026-10-17 both search addresses were opened in a desktop Chrome browser for "Cozumel shore excursions" and "Skagway shore excursions": Viator (`https://www.viator.com/searchResults/all?text=...`) showed 200+ and 56 results, and GetYourGuide (`https://www.getyourguide.com/s/?q=...`) showed 252 and 23 results. Viator showed a brief automatic device check that passed without input. The app links both searches beside the nine cruise lines below. Results for the other ports are UNVERIFIED.
 
 | Line | Address | What opened |
 |---|---|---|

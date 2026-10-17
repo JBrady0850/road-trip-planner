@@ -479,7 +479,12 @@
       lineSearch: `https://www.google.com/search?q=${q(`${found ? found[0] + " " : "cruise "}${port.name} shore excursions`)}`,
       independent: `https://www.google.com/search?q=${q(`${port.name} private shore excursion tour cruise passengers`)}`,
       rental: `https://www.google.com/maps/search/?api=1&query=${q(`car rental near ${port.name} cruise port`)}`,
-      taxi: `https://www.google.com/maps/search/?api=1&query=${q(`taxi or private driver near ${port.name} cruise port`)}`
+      taxi: `https://www.google.com/maps/search/?api=1&query=${q(`taxi or private driver near ${port.name} cruise port`)}`,
+      // Tour marketplaces; search address format checked 2026-10-17 (Cozumel, Skagway).
+      tours: [
+        { label: "Viator", url: `https://www.viator.com/searchResults/all?text=${q(`${port.name} shore excursions`)}` },
+        { label: "GetYourGuide", url: `https://www.getyourguide.com/s/?q=${q(`${port.name} shore excursions`)}` }
+      ]
     };
   };
 
