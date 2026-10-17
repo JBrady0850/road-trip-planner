@@ -49,8 +49,8 @@ Each device keeps its own trips. To move a trip to another device, use
 The tabs across the top are numbered in the order you plan: **1 Plan**, **2 Trips**,
 **3 Itinerary**, **4 Navigate**, **5 Weather & Roads**, **6 Budget & Booking**. Every
 step ends with a **Next** button that takes you to the following step, and a
-**Back** button. The last step ends with **Save my trip**. 50 States, Settings, and
-Feedback are always one tap away on the right.
+**Back** button. The last step ends with **Save my trip**. **Cruise Day**, 50 States,
+Settings, and Feedback are always one tap away on the right.
 
 ## Save your trips
 
@@ -83,6 +83,7 @@ Screenshots use a sample traveler from Knoxville, TN; weather shown is sample da
 | **5. Weather and roads.** National Weather Service forecasts and alerts, plus official state road-condition pages. ![Weather and roads](docs/images/05-weather-roads.png) | **6. Budget and booking.** Estimate against your cap and a checklist with booking links. ![Budget and booking](docs/images/06-budget-booking.png) |
 | **7. 50-state tracker.** Tap states visited; the current trip is outlined. ![50-state tracker](docs/images/07-tracker.png) | **8. Tablet.** The same app on an iPad or Android tablet, added to the home screen. ![Tablet](docs/images/08-tablet.png) |
 | **9. Give feedback.** Testers answer a few questions; one tap fills in the GitHub form, or saves the answers as a file. ![Feedback](docs/images/10-feedback.png) | **10. Know the town?** Type it in City; that trip comes first, and the rest of the state follows, ranked. ![City first](docs/images/11-city.png) |
+| **11. A day in port.** Pick the port and the ship's times; compare a cruise excursion, a private driver, and a rental car. ![Cruise Day](docs/images/12-cruise.png) | |
 
 ## Run it from a download (optional)
 
@@ -163,10 +164,23 @@ works: upload the `app` folder as is.
 8. **Budget and booking:** lodging, fuel, food, attractions, and contingency against
    your cap, plus a booking checklist with lodging search links (and fishing license
    links when you fish). You book; the app never reserves or pays.
-9. **50 states:** tap to mark states visited; finished trips mark their states.
-10. **Optional AI itineraries:** add your own Anthropic API key in Settings to have
+9. **Cruise port days:** the **Cruise Day** tab plans one day in port. Pick a port from
+   40 (Caribbean, Mexico, Alaska, Hawaii, Canada and New England, and US homeports),
+   or type any port or town. Enter when the ship arrives and leaves; the app allows
+   15 minutes to get off the ship, extra time for tender boats, and an all-aboard
+   buffer you choose (30 to 90 minutes). It fits places that match the same 24
+   interests between those times, three ways side by side: a **cruise excursion**
+   (links to the shore excursion pages of nine cruise lines, plus web searches), a
+   **private driver or taxi**, and a **rental car**. Each plan shows when you are
+   back at the pier and how many minutes you have to spare, with rough price
+   estimates. **Use this plan as my itinerary** turns it into a one-day trip that
+   works with Navigate and the saved itinerary. The app does not book anything, and
+   it cannot see excursion prices or availability. Whether a port is a tender port
+   changes by call, so confirm it on your ship's daily schedule.
+10. **50 states:** tap to mark states visited; finished trips mark their states.
+11. **Optional AI itineraries:** add your own Anthropic API key in Settings to have
     Claude write a custom itinerary, which then goes through the same checks.
-11. **Feedback:** the **Feedback** tab asks testers what they tried, how easy it
+12. **Feedback:** the **Feedback** tab asks testers what they tried, how easy it
     was, what worked, and what to change. **Open on GitHub** fills in the tester form
     for them; **Save as a file** works without a GitHub account.
 
@@ -190,6 +204,7 @@ address and booking numbers. To send code or catalog changes, see
 app/                 the app (open index.html)
   data/catalog.js    destinations: edit or add your own
   data/states.js     50 states, road-condition links, fishing license pages
+  data/ports.js      40 cruise ports with places near each (Cruise Day tab)
   js/engine.js       scoring, drafting, checker, links, exports (no network)
   js/services.js     place search, routing, weather, optional AI
   js/app.js          interface

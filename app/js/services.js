@@ -16,11 +16,11 @@
   // Nominatim usage policy: at most 1 request per second, identify the application.
   let lastGeo = 0;
   const throttle = async () => { const wait = 1100 - (Date.now() - lastGeo); if (wait > 0) await new Promise(r => setTimeout(r, wait)); lastGeo = Date.now(); };
-  S.geocode = async (q) => {
+  S.geocode = async (q, world = false) => {
     await throttle();
     const email = settings().contactEmail ? `&email=${encodeURIComponent(settings().contactEmail)}` : "";
-    const res = await getJSON(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=us&limit=5&q=${encodeURIComponent(q)}${email}`);
-    return res.map(x => ({ label: x.display_name, lat: +x.lat, lon: +x.lon, state: (x.address && (x.address.state || "")) || "" }));
+    const res = await getJSON(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1${world ? "" : "&countrycodes=us"}&limit=5&q=${encodeURIComponent(q)}${email}`);
+    return res.map(x => ({ label: x.display_name, lat: +x.lat, lon: +x.lon, state: (x.address && (x.address.state || "")) || "", country: (x.address && x.address.country) || "" }));
   };
 
   // Name the town at a point (used once after "Use my location"; nothing else leaves the device).

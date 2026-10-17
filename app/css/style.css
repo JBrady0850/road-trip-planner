@@ -200,3 +200,11 @@ main:focus { outline: none; }
 .fish-license { display: flex; gap: 6px; align-items: flex-start; margin: 8px 0 0; } .fish-license .ico { color: var(--water); flex: none; }
 .fish-card { border-left: 6px solid var(--water); } .fish-card h2 { display: flex; gap: 8px; align-items: center; } .fish-card .ico.big { color: var(--water); }
 .fish-plan { margin: 10px 0 4px; padding: 8px 10px; border-left: 4px solid var(--water); border-radius: 6px; background: var(--bg); }
+/* cruise port day */
+.plan-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-bottom: 12px; }
+.plan-card { display: flex; flex-direction: column; margin-bottom: 0; border-top: 5px solid var(--water); }
+.plan-card h3 { margin: 0 0 4px; } .plan-card .btn { margin-top: auto; align-self: flex-start; }
+.plan-stops { margin: 6px 0; padding-left: 22px; } .plan-stops li { margin: 3px 0; }
+.plan-card .links { padding-left: 18px; margin: 6px 0 12px; } .plan-card .links li { margin: 4px 0; }
+.cruise-notes { margin: 8px 0; padding-left: 20px; } .cruise-notes li { margin: 4px 0; }
+.cost { font-weight: 600; }

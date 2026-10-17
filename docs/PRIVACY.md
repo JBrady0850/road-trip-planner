@@ -13,7 +13,10 @@
   Nominatim, stop coordinates to the OSRM router, stop coordinates to the National
   Weather Service, and, only if you add your own key, your trip preferences to the
   Anthropic API. A town typed in **City** goes to Nominatim once, and only when the
-  catalog does not already have it; catalog towns need no lookup.
+  catalog does not already have it; catalog towns need no lookup. A port typed on the
+  Cruise Day tab goes to Nominatim once, and only when it is not one of the 40 listed
+  ports. Excursion, rental, and taxi links open the cruise lines' own pages or a web
+  or map search; the app sends them nothing.
 - Fishing license links open each state's official wildlife agency page. The app
   sends nothing to those sites; you buy the license there yourself.
 - The contact email in Settings is optional and is not an account; no sign-up is

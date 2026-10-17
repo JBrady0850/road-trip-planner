@@ -4,9 +4,9 @@
    request asks the server whether the file changed ("no-cache"); a reload right
    after a release then runs the new app, not a stored copy. Live services (routing, weather, place search, AI) still need a
    connection and are never cached. Bump VERSION when the file list changes. */
-const VERSION = "rtp-v0.5.1";
+const VERSION = "rtp-v0.6.0";
 const FILES = ["./", "index.html", "css/style.css", "js/engine.js", "js/services.js", "js/app.js",
-  "data/catalog.js", "data/states.js", "manifest.webmanifest", "icon.svg", "icon-180.png",
+  "data/catalog.js", "data/states.js", "data/ports.js", "manifest.webmanifest", "icon.svg", "icon-180.png",
   "icon-192.png", "icon-512.png", "icon-maskable-512.png", "qr-app.png"];
 self.addEventListener("install", e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())));

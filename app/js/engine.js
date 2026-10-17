@@ -23,7 +23,7 @@
     rules: { maxDriveHours: 7, budgetCap: 1500, walkMiles: 5, nightsMin: 3, nightsMax: 7, checkinTarget: "15:00", checkinWindow: 60, ticketMargin: 30, arriveBeforeSunset: true, startTime: "08:30", stopsPerDay: 3, pace: "balanced" },
     lodging: { brand: "Any", nightlyLow: 120, nightlyHigh: 180, freeBreakfast: true, comfort: "mid" },
     dining: { diet: "No restriction", upscaleDinners: 1, lunchCap: 30, foodPerDay: 55 },
-    interests: ["scenic", "parks", "food"], months: [], flyOk: false, visited: [], destState: "", destCity: "", destPlace: null, aiKey: "", aiModel: "claude-sonnet-5-5"
+    interests: ["scenic", "parks", "food"], months: [], flyOk: false, visited: [], destState: "", destCity: "", destPlace: null, cruise: { portId: "", typed: "", place: null, date: "", arrive: "08:00", depart: "17:00", buffer: 30, line: "" }, aiKey: "", aiModel: "claude-sonnet-5-5"
   });
 
   // ---------- presets ----------
@@ -388,6 +388,99 @@
       ["Attractions", attractions[0], attractions[1], "placeholder; replace with real admission prices"],
       ["Contingency (10%)", baseLow * 0.1, baseHigh * 0.1, ""]],
       total: [baseLow * 1.1, baseHigh * 1.1], cap: profile.rules.budgetCap };
+  };
+
+  // ---------- cruise port day ----------
+  /* A day in port: the ship docks at `arrive`, everyone must be aboard `buffer` minutes
+     before `depart`. The plan fits places between the two, three ways: a cruise-line
+     excursion, a private driver or taxi, and a rental car. Times and prices are
+     estimates (docs/LIMITS.md). Excursion pages were opened and checked 2026-10-17
+     (docs/catalog-check.md). */
+  RT.CRUISE_LINES = [
+    ["Royal Caribbean", "https://www.royalcaribbean.com/booked/shore-excursions"],
+    ["Carnival", "https://www.carnival.com/shore-excursions"],
+    ["Norwegian", "https://www.ncl.com/shore-excursions"],
+    ["Princess", "https://www.princess.com/shore-excursions"],
+    ["Holland America", "https://www.hollandamerica.com/en/sf/shorex"],
+    ["Celebrity", "https://www.celebritycruises.com/booked/excursions"],
+    ["Disney", "https://disneycruise.disney.go.com/why-cruise-disney/whats-included-in-cruise/port-adventures/"],
+    ["Viking", "https://www.vikingcruises.com/oceans/why-viking/shore-excursions"],
+    ["MSC", "https://www.msccruisesusa.com/excursions"]
+  ];
+  // Cruise lines list a port as tender, dock, or either depending on the call, so the
+  // app says "usually" or "may" and tells the traveler to confirm with the ship.
+  RT.TENDER = {
+    tender: ["Tender port", "Ships usually anchor offshore and small boats carry guests to land. Allow extra time each way, and expect lines for the boats."],
+    varies: ["May be a tender port", "Some calls dock at a pier and some anchor and use tenders. Check your ship's daily schedule before you plan the day."],
+    pier: ["Pier", "Ships usually dock at a pier here. Confirm on your ship's schedule."],
+    unknown: ["Dock or tender not confirmed", "The sources I checked do not say. Confirm on your ship's schedule."]
+  };
+  RT.TENDER_MIN = { tender: 30, varies: 15, pier: 0, unknown: 15 }; // extra minutes each way
+  RT.DISEMBARK_MIN = 15;
+  RT.portLegMin = (a, b) => Math.max(8, Math.round(haversineMi(a, b) * 1.3 / 30 * 60)); // about 30 mph on port roads
+  const PORT_PLANS = [
+    { key: "excursion", label: "Cruise excursion", lead: 15, tail: 0, per: 0 },
+    { key: "driver", label: "Private driver or taxi", lead: 10, tail: 0, per: 5 },
+    { key: "rental", label: "Rental car", lead: 35, tail: 25, per: 10 }
+  ];
+  const fitPort = (profile, port, cfg, start, back) => {
+    const pool = port.stops.slice(), hits = s => s[5].filter(k => profile.interests.includes(k)).length;
+    const home = [port.lat, port.lon], limit = back - cfg.tail, cap = Math.max(2, profile.rules.stopsPerDay || 3) + 1;
+    let t = start + cfg.lead, cur = home; const stops = [];
+    while (pool.length && stops.length < cap) {
+      let best = null;
+      pool.forEach(s => {
+        const leg = RT.portLegMin(cur, [s[2], s[3]]), ret = RT.portLegMin([s[2], s[3]], home);
+        if (t + leg + s[4] + cfg.per + ret > limit) return;
+        const score = hits(s) * 100 - leg;
+        if (!best || score > best.score) best = { s, leg, score };
+      });
+      if (!best) break;
+      pool.splice(pool.indexOf(best.s), 1);
+      t += best.leg; const arr = t; t += best.s[4];
+      stops.push(mkStop(best.s[0], best.s[1], best.s[2], best.s[3], { type: typeOf(best.s), arrive: fromMin(arr), depart: fromMin(t), minutes: best.s[4], state: "" }));
+      t += cfg.per; cur = [best.s[2], best.s[3]];
+    }
+    const end = stops.length ? t + RT.portLegMin(cur, home) + cfg.tail : start;
+    return { stops, endMin: Math.round(end) };
+  };
+  RT.portDay = (profile, port, o) => {
+    const arrive = toMin(o.arrive), depart = toMin(o.depart), buffer = Number.isFinite(+o.buffer) ? +o.buffer : 30;
+    const extra = RT.TENDER_MIN[port.tender] ?? 15, start = arrive + RT.DISEMBARK_MIN + extra, back = depart - buffer - extra;
+    const res = { port, buffer, ashore: fromMin(start), backBy: fromMin(Math.max(0, back)), windowMin: back - start, plans: [], warnings: [] };
+    if (arrive == null || depart == null || depart <= arrive) { res.windowMin = 0; res.warnings.push("Departure must be later than arrival on the same day."); return res; }
+    if (res.windowMin < 60) { res.warnings.push(`Only ${Math.max(0, res.windowMin)} minutes ashore after getting off the ship and allowing ${buffer} minutes to be back. Stay near the pier.`); return res; }
+    if (res.windowMin < 240) res.warnings.push(`A short day: about ${Math.floor(res.windowMin / 60)} h ${res.windowMin % 60} min ashore. Pick one or two places.`);
+    const tn = RT.TENDER[port.tender] || RT.TENDER.unknown;
+    if (extra) res.warnings.push(`The plan adds ${extra} minutes each way for the boat.`);
+    PORT_PLANS.forEach(cfg => {
+      const fit = fitPort(profile, port, cfg, start, back), away = Math.max(1, (fit.endMin - start) / 60);
+      const cost = cfg.key === "driver" ? [Math.round(away * 55), Math.round(away * 95)] : cfg.key === "rental" ? [65, 130] : null;
+      res.plans.push({ key: cfg.key, label: cfg.label, stops: fit.stops, endMin: fit.endMin, backAboard: fromMin(fit.endMin), spareMin: back - fit.endMin, cost, hoursAway: Math.round(away * 10) / 10 });
+    });
+    if (port.left) res.warnings.push("Traffic drives on the left here. Check the rental company's rules for visitors.");
+    return res;
+  };
+  /* The chosen plan as a one-day trip (ship, places, ship) so Navigate, the saved
+     itinerary, calendar, and CSV work like any trip. */
+  RT.portTrip = (profile, port, o, date, planKey) => {
+    const day = RT.portDay(profile, port, o), plan = day.plans.find(p => p.key === planKey) || day.plans[1];
+    if (!plan) return null;
+    // The address is the coordinates, so Google Maps opens the pier area and not a guess from a name.
+    const ship = extra => mkStop("Ship at " + port.name, `${port.lat},${port.lon}`, port.lat, port.lon, { type: "Ship", ...extra });
+    const stops = [ship({ depart: fromMin(toMin(o.arrive) + RT.DISEMBARK_MIN + (RT.TENDER_MIN[port.tender] ?? 15)), notes: `Pier area at ${port.address}. Confirm your ship's berth on its daily schedule.` }), ...plan.stops, ship({ arrive: plan.backAboard, notes: `All aboard by ${hm12(fromMin(toMin(o.depart) - day.buffer))}; the ship leaves at ${hm12(o.depart)}.` })];
+    return { name: `${port.name} port day`, destId: "port:" + port.id, states: [], fly: false, base: { name: "Ship", addr: port.address, lat: port.lat, lon: port.lon }, days: [{ date, title: `${port.name}: ${plan.label}`, stops }], createdBy: "cruise", cruise: { portId: port.id, arrive: o.arrive, depart: o.depart, buffer: day.buffer, plan: plan.key, line: o.line || "" } };
+  };
+  RT.portLinks = (port, line) => {
+    const q = encodeURIComponent, found = RT.CRUISE_LINES.find(l => l[0] === line);
+    const lines = found ? [found] : RT.CRUISE_LINES;
+    return {
+      lines: lines.map(l => ({ label: `${l[0]} shore excursions`, url: l[1] })),
+      lineSearch: `https://www.google.com/search?q=${q(`${found ? found[0] + " " : "cruise "}${port.name} shore excursions`)}`,
+      independent: `https://www.google.com/search?q=${q(`${port.name} private shore excursion tour cruise passengers`)}`,
+      rental: `https://www.google.com/maps/search/?api=1&query=${q(`car rental near ${port.name} cruise port`)}`,
+      taxi: `https://www.google.com/maps/search/?api=1&query=${q(`taxi or private driver near ${port.name} cruise port`)}`
+    };
   };
 
   // ---------- exports ----------

@@ -346,3 +346,383 @@ Each state's page was found by a separate research pass and then opened again fr
 | WI | <https://dnr.wisconsin.gov/topic/Fishing/outreach/FishingLicenses> | Fishing licenses / Fishing Wisconsin / Wisconsin DNR |
 | WY | <https://wgfd.wyo.gov/licenses-applications> | Licenses & Applications / Wyoming Game & Fish Department |
 
+## Cruise Day: ports, excursion pages, and tender ports (2026-10-17)
+
+Shore excursion pages were opened on 2026-10-17 with a page reader. The reader does not report redirects, so the address a visitor finally lands on is UNVERIFIED. Viator and GetYourGuide blocked the reader (robots rules), so the app links only to the nine cruise lines below and to web and map searches.
+
+| Line | Address | What opened |
+|---|---|---|
+| Royal Caribbean | <https://www.royalcaribbean.com/booked/shore-excursions> | Opens without a visible sign-in wall; browse by type, no port search (links to port guides). |
+| Carnival | <https://www.carnival.com/shore-excursions> | Opens; public excursions page. |
+| Norwegian | <https://www.ncl.com/shore-excursions> | Opens; search by destination, port, and activity. |
+| Princess | <https://www.princess.com/shore-excursions> | Opens; filters 413 excursions by destination and port. |
+| Holland America | <https://www.hollandamerica.com/en/sf/shorex> | Opens; describes the tours, no port search. The booking page asks for sign-in. |
+| Celebrity | <https://www.celebritycruises.com/booked/excursions> | Opens without a visible sign-in wall; browse by type, no port search. |
+| Disney | <https://disneycruise.disney.go.com/why-cruise-disney/whats-included-in-cruise/port-adventures/> | Opens; describes the Port Adventure types, no list by port. |
+| Viking | <https://www.vikingcruises.com/oceans/why-viking/shore-excursions> | Opens; included and optional excursions; booking is in My Viking Journey. |
+| MSC | <https://www.msccruisesusa.com/excursions> | Opens; the page reports no redirect; Find an excursion leads to booking. |
+
+### Tender ports
+
+Two lists were read: the [Norwegian Cruise Line tender port list](https://www.ncl.com/ca/en/about/accessible-cruising-tender-ports) (asterisk means the ship can dock or anchor, varies by call) and the [Planet Cruise full tender list](https://help.planetcruise.com/hc/en-gb/articles/6709997918748-Tender-ports-Full-list-by-destination) (notes that some ports are only partial tenders). Hawaii and Alaska were also read in two guides ([Hawaii cruise ports](https://thehawaiivacationguide.com/hawaii-cruise-ports/), [Alaska cruise ports](https://www.cruisehive.com/alaska-cruise-ports/100083)). The Hawaii sources conflict: the Norwegian list names Hilo, Honolulu, Kahului, and Nawiliwili, and the guide calls them piers; the app shows them as May be a tender port. Lahaina is left out: the guide says it has not been in use since the August 2023 fires. Bermuda and Nassau appear on neither list (UNVERIFIED). A ship can dock or tender depending on the call, so the app says usually or may and sends the traveler to the ship's daily schedule.
+
+| Port | In the app | Basis |
+|---|---|---|
+| Nassau | unknown | Not covered by either list |
+| George Town, Grand Cayman | tender | On the Norwegian tender list without an asterisk, or on both lists |
+| Cozumel | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Costa Maya | pier | On neither list |
+| Roatan | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Belize City | tender | On the Norwegian tender list without an asterisk, or on both lists |
+| Ocho Rios | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Grand Turk | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| St. Thomas | pier | On neither list |
+| Philipsburg, St. Maarten | pier | On neither list |
+| San Juan | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Key West | pier | On neither list |
+| Royal Naval Dockyard, Bermuda | unknown | Not covered by either list |
+| Oranjestad, Aruba | pier | On neither list |
+| Cabo San Lucas | tender | On the Norwegian tender list without an asterisk, or on both lists |
+| Puerto Vallarta | pier | On neither list |
+| Mazatlan | pier | On neither list |
+| Ensenada | pier | On neither list |
+| Galveston | pier | On neither list |
+| New Orleans | pier | On neither list |
+| Miami | pier | On neither list |
+| Fort Lauderdale (Port Everglades) | pier | On neither list |
+| Port Canaveral | pier | On neither list |
+| Tampa | pier | On neither list |
+| Seattle | pier | On neither list |
+| San Diego | pier | On neither list |
+| New York City (Manhattan) | pier | On neither list |
+| Boston | pier | On neither list |
+| Juneau | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Ketchikan | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Skagway | pier | On neither list |
+| Sitka | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Honolulu | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Kahului, Maui | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Kailua-Kona | tender | On the Norwegian tender list without an asterisk, or on both lists |
+| Hilo | varies | On a list, marked 'dock or anchor, varies by call', or the two sources disagree |
+| Victoria, BC | pier | On neither list |
+| Vancouver | pier | On neither list |
+| Halifax | pier | On neither list |
+| Bar Harbor | tender | On the Norwegian tender list without an asterisk, or on both lists |
+
+### Port points
+
+Distances come from a point for the port. Where OpenStreetMap had no cruise terminal under the name searched, the point is the town or harbor, not the pier (UNVERIFIED terminal position). The ship stop in an itinerary uses that point as coordinates.
+
+| Port | Point found |
+|---|---|
+| Nassau | Prince George Wharf, Nassau, New Providence, The Bahamas (25.0798, -77.3424) |
+| George Town, Grand Cayman | George Town, Cayman Islands (19.2954, -81.3808) |
+| Cozumel | Puerta Maya, San Miguel, San Miguel de Cozumel, Cozumel, Quintana Roo, México (20.4759, -86.9748) |
+| Costa Maya | Mahahual, Othón P. Blanco, Quintana Roo, 77976, México (18.7257, -87.7072) |
+| Roatan | Coxen Hole, Roatán, Islas de la Bahía, 34101, Honduras (16.3211, -86.5383) |
+| Belize City | Belize City, Belize District, Belize (17.5003, -88.1989) |
+| Ocho Rios | Ocho Rios, Saint Ann, Middlesex County, Jamaica (18.4081, -77.1011) |
+| Grand Turk | Turks and Caicos National Museum, Front Street, Cockburn Town, Grand Turk, Turks and Caico (21.4713, -71.1474) |
+| St. Thomas | Saint Thomas Harbor, Havensight, Charlotte Amalie West, Estate Thomas, Saint Thomas - Sain (18.3300, -64.9288) |
+| Philipsburg, St. Maarten | Philipsburg, Sint Maarten, Nederland (18.0251, -63.0483) |
+| San Juan | Muelle 3, Paseo Dr. Gilberto Concepción de Gracia, Viejo San Juan, San Juan, Puerto Rico,  (18.4622, -66.1117) |
+| Key West | Mallory Square, Key West, Monroe County, Florida, United States (24.5592, -81.8067) |
+| Royal Naval Dockyard, Bermuda | Royal Naval Dockyard, Sandys, MA 01, Bermuda (32.3276, -64.8340) |
+| Oranjestad, Aruba | Oranjestad, Aruba, Nederland (12.5201, -70.0371) |
+| Cabo San Lucas | Mi Mexico Arts, Crafts & Jewelry, Paseo de La Marina, El Médano Ejidal, Cabo San Lucas, Mu (22.8855, -109.9088) |
+| Puerto Vallarta | Terminal marítima, Francisco Medina Ascencio, Puerto Vallarta, Región Costa Norte, Jalisco (20.6542, -105.2407) |
+| Mazatlan | Mazatlán, Sinaloa, 82000, México (23.2036, -106.4208) |
+| Ensenada | Ensenada, Municipio de Ensenada, Baja California, México (31.8659, -116.6030) |
+| Galveston | Port of Galveston Cruise Terminal 25, 2502, Harborside Drive, Galveston, Galveston County, (29.3085, -94.7966) |
+| New Orleans | New Orleans, Orleans Parish, Louisiana, United States (29.9575, -90.0629) |
+| Miami | Miami, Miami-Dade County, Florida, United States (25.7742, -80.1936) |
+| Fort Lauderdale (Port Everglades) | Port Everglades, Fort Lauderdale, Broward County, Florida, 33316, United States (26.0969, -80.1273) |
+| Port Canaveral | Port Canaveral, Brevard County, Florida, 32920, United States (28.4161, -80.6078) |
+| Tampa | Tampa, Hillsborough County, Florida, United States (27.9450, -82.4583) |
+| Seattle | Seattle, King County, Washington, United States (47.6038, -122.3301) |
+| San Diego | San Diego, San Diego County, California, United States (32.7157, -117.1638) |
+| New York City (Manhattan) | Manhattan Cruise Terminal, Manhattan Community Board 4, Manhattan, New York County, New Yo (40.7677, -73.9990) |
+| Boston | Black Falcon Cruise Terminal, Seaport, Boston, Suffolk County, Massachusetts, United State (42.3440, -71.0307) |
+| Juneau | Juneau, Alaska, United States (58.3020, -134.4197) |
+| Ketchikan | Ketchikan, Ketchikan Gateway Borough, Alaska, 99901, United States (55.3431, -131.6467) |
+| Skagway | Broadway, Skagway, Alaska, 99840, United States (59.4570, -135.3121) |
+| Sitka | Crescent Harbor, Barlow Street, Sitka, Alaska, 99835, United States (57.0497, -135.3281) |
+| Honolulu | Aloha Tower Marketplace, 1, Aloha Tower Drive, Downtown, Chinatown, Honolulu, Honolulu Cou (21.3067, -157.8656) |
+| Kahului, Maui | Kahului Harbor, Kahului, Maui County, Hawaii, United States (20.8958, -156.4719) |
+| Kailua-Kona | Kailua Pier, Aliʻi Drive, Hillcrest, Kailua, Hawaiʻi County, Hawaii, 96840, United States (19.6392, -155.9968) |
+| Hilo | Hilo, Hawaiʻi County, Hawaii, 96720, United States (19.7074, -155.0816) |
+| Victoria, BC | Victoria, Capital Regional District, British Columbia, Canada (48.4283, -123.3650) |
+| Vancouver | Canada Place, Financial District, Downtown, Vancouver, Metro Vancouver Regional District,  (49.2885, -123.1169) |
+| Halifax | Halifax, Halifax Regional Municipality, Halifax County, Nova Scotia, Canada (44.6486, -63.5859) |
+| Bar Harbor | Bar Harbor Town Pier, Ells Pier, Bar Harbor, Hancock County, Maine, 04644, United States (44.3921, -68.2041) |
+
+### Places (235)
+
+Each place was searched by name on OpenStreetMap Nominatim, then kept only when a result matched the name and sat within 130 km of the port point. Addresses follow lesson L-028: a house number only when OpenStreetMap gives both number and road.
+
+| Port | Place | Matched on OpenStreetMap | km from port point |
+|---|---|---|---|
+| Nassau | Queen's Staircase | The Queen's Staircase, Nassau, New Providence, The Bahamas | 0.9 |
+| Nassau | Fort Fincastle | Fort Fincastle, Greenwich Street, Nassau, New Providence, The Bahamas | 0.8 |
+| Nassau | Junkanoo Beach | Junkanoo Beach, Nassau, New Providence, The Bahamas | 0.6 |
+| Nassau | Cabbage Beach | Cabbage Beach, Nassau, New Providence, The Bahamas | 2.5 |
+| Nassau | Atlantis Aquaventure | Atlantis Paradise Island, 1, Casino Drive, Nassau, New Providence, The Bahamas | 2.1 |
+| Nassau | Straw Market | Straw Market, Market Street, Nassau, New Providence, The Bahamas | 0.2 |
+| Nassau | Ardastra Gardens, Zoo and Conservation Centre | Ardastra Gardens, Zoo & Conservation Centre, Infant View Road, Chippingham, Nass | 2.0 |
+| George Town, Grand Cayman | Queen Elizabeth II Botanic Park | Queen Elizabeth II Botanic Park, Old Isaacs, George Town, KY1-1105, Cayman Islan | 22.3 |
+| George Town, Grand Cayman | Cayman Islands National Museum | National Museum, Goring Avenue, Rock Hole, George Town, KY1-1105, Cayman Islands | 0.3 |
+| George Town, Grand Cayman | Hell, Grand Cayman | Hell, West Bay, KY1-1401, Cayman Islands | 9.4 |
+| George Town, Grand Cayman | Pedro St. James | Pedro St. James, Pedro Castle Road, Savannah, George Town, KY1-1105, Cayman Isla | 9.9 |
+| George Town, Grand Cayman | Cayman Spirits Distillery | Cayman Spirits Co., Esterley Tibbetts Highway, The Rock, Whitehall Estate, Georg | 1.2 |
+| Cozumel | Chankanaab Beach Adventure Park | Parque Natural Laguna de Chankanaab, Nojoch Suku'un, San Miguel de Cozumel, Cozu | 4.2 |
+| Cozumel | Playa Mia Grand Beach Park | Playa Mia, Casa Birdie, Cozumel, Quintana Roo, México | 10.0 |
+| Cozumel | San Gervasio Mayan Ruins | San Gervasio, QR, San Antonio, Cozumel, Quintana Roo, 77680, México | 13.6 |
+| Cozumel | Punta Sur Eco Beach Park | Punta Sur Eco Beach Park, Carretera Perimetral Cozumel, Playa Bosh, El Cedral, C | 19.9 |
+| Cozumel | Cozumel town plaza | Parque Benito Juárez, 5a Av. Sur, Centro, San Miguel de Cozumel, Cozumel, Quinta | 4.6 |
+| Cozumel | Mr. Sanchos Beach Club | Mr Sanchos, Playa Mía, Cozumel, Quintana Roo, México | 10.6 |
+| Cozumel | Cozumel Museum | Museo de la Isla de Cozumel, Avenida Rafael E. Melgar, Gonzálo Guerrero, San Mig | 5.0 |
+| Costa Maya | Chacchoben Mayan Ruins | Chacchoben, Bacalar, Quintana Roo, México | 60.0 |
+| Costa Maya | Mahahual malecon | Calle Malecon, Mahahual, Othón P. Blanco, Quintana Roo, 77976, México | 0.6 |
+| Costa Maya | Bacalar Lagoon | Laguna de Bacalar, Othón P. Blanco, Quintana Roo, México | 57.6 |
+| Costa Maya | Cenote Azul | Cenote Azul, Boulevard Costera, Bacalar, Quintana Roo, 77933, México | 74.9 |
+| Costa Maya | Fuerte de San Felipe Bacalar | Fuerte de San Felipe, Boulevard 1, Bacalar, Quintana Roo, 97326, México | 72.0 |
+| Roatan | West Bay Beach | West Bay Beach, West Bay, Roatán, Islas de la Bahía, 33166, Honduras | 8.3 |
+| Roatan | Gumbalimba Park | Gumbalimba Park, Carril de Palma, West Bay, Roatán, Islas de la Bahía, 33166, Ho | 7.5 |
+| Roatan | Carambola Botanical Gardens | Carambola Gardens, Carretera Principal de la Isla de Roatán, Sandy Bay Point, Co | 3.6 |
+| Roatan | Maya Key | Maya Key, Coxen Hole, Roatán, Islas de la Bahía, Honduras | 1.2 |
+| Belize City | Altun Ha | Altun Ha, Belize District, Belize | 33.2 |
+| Belize City | Xunantunich | Xunantunich Blvd, Lord's Bank, Belize District, Belize | 13.7 |
+| Belize City | Lamanai | Lamanai Archaeological Reserve, Orange Walk, Belize | 56.7 |
+| Belize City | Cave tubing at Jaguar Paw | Cave Tubing and Zipline with Explore Belize Caves, Old Well Road, Lord's Bank, B | 14.9 |
+| Ocho Rios | Dunn's River Falls | Dunn's River Falls, Ocho Rios, Saint Ann, Middlesex County, Jamaica | 4.2 |
+| Ocho Rios | Mystic Mountain | Mystic Mountain, Governors Hill Road, Pimento Walk, Murphy Hill, Ocho Rios, Sain | 2.0 |
+| Ocho Rios | Konoko Falls and Park | Konoko Falls, Ocho Rios, Saint Ann, Middlesex County, Jamaica | 1.3 |
+| Ocho Rios | Fern Gully | Fern Gully, Ocho Rios, Saint Ann, Middlesex County, Jamaica | 3.8 |
+| Ocho Rios | Bob Marley Centre and Mausoleum | Bob Marley Mausoleum, Nine Mile Road, Syms Run, Nine Mile, Saint Ann, Middlesex  | 22.4 |
+| Grand Turk | Cockburn Town | Grand Turk, Cockburn Town, Grand Turk, Turks and Caicos Islands | 1.0 |
+| Grand Turk | Turks and Caicos National Museum | Turks and Caicos National Museum, Front Street, Cockburn Town, Grand Turk, Turks | 0.0 |
+| Grand Turk | Grand Turk Lighthouse | Grand Turk Lighthouse, Lighthouse Road, Cockburn Town, Grand Turk, Turks and Cai | 4.7 |
+| Grand Turk | Governors Beach | Governor's Beach, Cockburn Town, Grand Turk, Turks and Caicos Islands | 3.5 |
+| Grand Turk | Jack's Shack | jack's Shack beach bar, Waterloo Road, Cockburn Town, Grand Turk, Turks and Caic | 4.3 |
+| St. Thomas | Magens Bay Beach | Magens Bay, Charlotte Amalie West, Peterborg, Saint Thomas - Saint John District | 3.4 |
+| St. Thomas | Coral World Ocean Park | Coral World Ocean Park, 6450, Coki Point Road, Coki Point, Frydendal, Saint Thom | 7.2 |
+| St. Thomas | Paradise Point Tramway | Paradise Point Drive, Havensight, Estate Thomas, Saint Thomas - Saint John Distr | 1.3 |
+| St. Thomas | Fort Christian | Fort Christian, 280, Forte Strade, Charlotte Amalie Historic District, Fort Chri | 1.2 |
+| St. Thomas | Mountain Top | Mountain Top, Saint Peter, Saint Thomas - Saint John District, United States Vir | 3.4 |
+| St. Thomas | Drake's Seat | Drake's Seat, Skyline Drive, Zufriedenheit, Charlotte Amalie West, Estate Thomas | 2.6 |
+| St. Thomas | Mahogany Run Golf Course | Mahogany Run Golf Course, Mahogany Run North, Mandal, Saint Thomas - Saint John  | 4.1 |
+| Philipsburg, St. Maarten | Maho Beach | Maho Beach, Maho, Lowlands, Sint Maarten, Nederland | 7.8 |
+| Philipsburg, St. Maarten | Orient Bay Beach | Baie Orientale, Saint-Martin, 97150, France | 7.4 |
+| Philipsburg, St. Maarten | Fort Amsterdam | Fort Amsterdam, Philipsburg, Sint Maarten, Nederland | 1.5 |
+| Philipsburg, St. Maarten | Marigot Market | Marigot Market, Boulevard de France, Galisbay, Marigot, Saint-Martin, 97150, Fra | 6.2 |
+| Philipsburg, St. Maarten | Loterie Farm | La Loterie Farm, 103, Colombier, Rambaud, Saint-Martin, 97150, France | 6.0 |
+| San Juan | Castillo San Cristobal | Castillo San Cristóbal, Calle de Norzagaray, La Perla, Viejo San Juan, San Juan, | 0.6 |
+| San Juan | Castillo San Felipe del Morro | Castillo San Felipe del Morro, Paseo del Morro, La Perla, Viejo San Juan, San Ju | 1.6 |
+| San Juan | El Yunque National Forest | Bosque Nacional El Yunque, Río Grande, Puerto Rico, United States | 39.3 |
+| San Juan | Old San Juan | Viejo San Juan, San Juan, Puerto Rico, United States | 0.7 |
+| San Juan | Condado Beach | Playita del Condado, Santurce, San Juan, Puerto Rico, United States | 4.1 |
+| San Juan | Paseo de la Princesa | Paseo de la Princesa, La Perla, Viejo San Juan, San Juan, Puerto Rico, 00901, Un | 0.9 |
+| Key West | Southernmost Point | Southernmost Point Buoy, Southernmost Point, Upper Duval, Old Town, Key West, Mo | 1.7 |
+| Key West | Fort Zachary Taylor Historic State Park | Fort Zachary Taylor Historic State Park, 601, Key West, Monroe County, Florida,  | 1.4 |
+| Key West | Key West Lighthouse | Key West Lighthouse, Whitehead Street, Bahama Village, Old Town, Key West, Monro | 1.1 |
+| Key West | Key West Butterfly and Nature Conservatory | Key West Butterfly & Nature Conservatory, Duval Street, Upper Duval, Old Town, K | 1.6 |
+| Key West | Duval Street | Duval Street, Lower Duval, Old Town, Key West, Monroe County, Florida, 33041, Un | 0.2 |
+| Key West | Key West Aquarium | Key West Aquarium, Wall Street, Lower Duval, Key West, Monroe County, Florida, 3 | 0.1 |
+| Royal Naval Dockyard, Bermuda | Horseshoe Bay Beach | Horseshoe Bay Beach, Southampton, Bermuda | 8.5 |
+| Royal Naval Dockyard, Bermuda | Gibbs Hill Lighthouse | Gibbs Hill Lighthouse, St. Anne's Road, Southampton, SN 02, Bermuda | 8.3 |
+| Royal Naval Dockyard, Bermuda | Crystal Caves | The Crystal Caves, 8, Crystal Cave Road, Hamilton, CR 04, Bermuda | 11.6 |
+| Royal Naval Dockyard, Bermuda | Hamilton | Front Street, City of Hamilton, HM 11, Bermuda | 6.1 |
+| Royal Naval Dockyard, Bermuda | St. George's | St. George's, Bermuda | 13.7 |
+| Royal Naval Dockyard, Bermuda | Bermuda Aquarium, Museum and Zoo | Bermuda Aquarium, Museum & Zoo, 40, North Shore Road, Flatts, Hamilton, FL 04, B | 9.1 |
+| Oranjestad, Aruba | Eagle Beach | Eagle Beach, Bushiri, Oranjestad West, Oranjestad, Aruba, Nederland | 3.8 |
+| Oranjestad, Aruba | Arikok National Park | Arikok National Park, San Fuego, Santa Cruz, Aruba, Nederland | 9.9 |
+| Oranjestad, Aruba | California Lighthouse | California Lighthouse, Hudishibana, Noord overig, Aruba, Nederland | 10.5 |
+| Oranjestad, Aruba | Natural Pool Aruba | New Small Natural Pool, Matividiri, Matidiviri, Wayaca, Santa Cruz, Aruba, Neder | 7.7 |
+| Oranjestad, Aruba | Alto Vista Chapel | Alto Vista Chapel, Altovista Trail, Noord overig, Aruba, Nederland | 6.8 |
+| Oranjestad, Aruba | Butterfly Farm Aruba | The Butterfly Farm, J.E. Irausquin Boulevard, Bubali, Aruba, Nederland | 5.0 |
+| Cabo San Lucas | El Arco | El Arch of Cabo San Lucas, Grand Solmar, Cabo San Lucas, Municipio de Los Cabos, | 1.8 |
+| Cabo San Lucas | Lover's Beach | Playa de los Amantes, Cabo San Lucas, Municipio de Los Cabos, Baja California Su | 1.6 |
+| Cabo San Lucas | Medano Beach | Playa El Médano, Cabo Bello, Cabo San Lucas, Municipio de Los Cabos, Baja Califo | 1.9 |
+| Cabo San Lucas | San Jose del Cabo | Kiosco San José, Plaza Mijares, San José del Cabo, Municipio de Los Cabos, Baja  | 29.4 |
+| Cabo San Lucas | Cabo Wabo Cantina | Cabo Wabo Cantina, Calle Vicente Guerrero, Centro, Cabo San Lucas, Municipio de  | 0.5 |
+| Cabo San Lucas | Cabo San Lucas Marina | Marina Cabo San Lucas, Paseo de La Marina, El Médano Ejidal, Cabo San Lucas, Mun | 0.1 |
+| Puerto Vallarta | Malecon boardwalk | Malecón, Centro, Puerto Vallarta, Región Costa Norte, Jalisco, 48300, México | 4.9 |
+| Puerto Vallarta | Vallarta Botanical Gardens | Jardín Botánico de Vallarta, 299, Puerto Vallarta, Cabo Corrientes, Región Costa | 21.6 |
+| Puerto Vallarta | Church of Our Lady of Guadalupe | Parroquia de Nuestra Senora de Guadalupe, Hidalgo, Centro, Puerto Vallarta, Regi | 5.1 |
+| Puerto Vallarta | Los Muertos Beach | Muelle Playa de Los Muertos, Francisca Rodríguez, Zona Romántica, Puerto Vallart | 6.0 |
+| Puerto Vallarta | Zona Romantica | Zona Romántica, Puerto Vallarta, Región Costa Norte, Jalisco, 48300, México | 5.8 |
+| Mazatlan | Cathedral Basilica of the Immaculate Conception | Catedral de la Inmaculada Concepción, Calle Guillermo Nelson, CENTRO, Mazatlán,  | 0.3 |
+| Mazatlan | Faro Mazatlan Lighthouse | el faro de mazatlan, Cap. Joel Montes Camarena, Mazatlán, Sinaloa, 82000, México | 2.9 |
+| Mazatlan | Mazatlan Aquarium | Acuario Mazatlán, 111, Avenida de los Deportes, Los girasoles, López Mateos, Maz | 2.9 |
+| Mazatlan | Malecon Mazatlan | Malecon, Malecón de Mazatlán, Ferrocarrilera, Los Pinos, Mazatlán, Sinaloa, 8200 | 1.3 |
+| Mazatlan | Playa Olas Altas | Olas Altas, CENTRO, Mazatlán, Sinaloa, 82000, México | 1.1 |
+| Ensenada | La Bufadora | La Bufadora, Ensenada, Municipio de Ensenada, Baja California, 22794, México | 17.6 |
+| Ensenada | Bodegas de Santo Tomas | Santo Tomas Winery, Carretera Ensenada - Lázaro Cárdenas, Municipio de Ensenada, | 36.5 |
+| Ensenada | Mercado Negro | Mercado Negro, Avenida La Marina, Ensenada, Municipio de Ensenada, Baja Californ | 2.4 |
+| Ensenada | Hussong's Cantina | Cantina Hussong's, Avenida Ruíz, Ensenada, Municipio de Ensenada, Baja Californi | 2.4 |
+| Galveston | Moody Gardens | Moody Gardens, 1, Hope Boulevard, Galveston, Galveston County, Texas, 77554, Uni | 6.6 |
+| Galveston | The Strand Historic District | The Strand, Galveston, Galveston County, Texas, 77550, United States | 0.5 |
+| Galveston | Pleasure Pier | Galveston Island Historic Pleasure Pier, 2501, Seawall Boulevard, Galveston, Gal | 2.5 |
+| Galveston | Galveston Island State Park | Galveston Island State Park, 14901, Galveston, Galveston County, Texas, 77554, U | 20.4 |
+| Galveston | Bishop's Palace | 1892 Bishop's Palace, 1402, Broadway - Avenue J, Galveston, Galveston County, Te | 1.5 |
+| Galveston | Schlitterbahn Galveston | Schlitterbahn Waterpark Galveston, 2026, Lockheed Road, Galveston, Galveston Cou | 6.8 |
+| Galveston | Texas Seaport Museum and Tall Ship Elissa | Texas Seaport Museum, Kempner Avenue - 22nd Street, Galveston, Galveston County, | 0.3 |
+| New Orleans | French Quarter | French Quarter, New Orleans, Orleans Parish, Louisiana, 70116, United States | 0.3 |
+| New Orleans | Jackson Square | Jackson Square, 700, French Quarter, New Orleans, Orleans Parish, Louisiana, 701 | 0.0 |
+| New Orleans | The National WWII Museum | The National World War II Museum, 945, Magazine Street, Warehouse District, Fren | 1.9 |
+| New Orleans | New Orleans City Park | New Orleans Botanical Gardens, 5, Faubourg St. John, Lakeview, New Orleans, Orle | 4.6 |
+| New Orleans | Cafe du Monde | Café du Monde, 800, Decatur Street, French Market, French Quarter, New Orleans,  | 0.1 |
+| New Orleans | Frenchmen Street | Frenchmen Street, French Market, Faubourg Marigny, New Orleans, Orleans Parish,  | 1.0 |
+| New Orleans | Audubon Zoo | Audubon Zoo, Tchoupitoulas Street, Greenville, New Orleans, Orleans Parish, Loui | 7.6 |
+| Miami | South Beach | South Beach, Miami Beach, Miami-Dade County, Florida, 33139, United States | 6.0 |
+| Miami | Vizcaya Museum and Gardens | Vizcaya Museum and Gardens, Brickell Hammock, Miami, Miami-Dade County, Florida, | 3.7 |
+| Miami | Wynwood Walls | Wynwood Walls, 2520, Northwest 2nd Avenue, Overtown, Miami, Miami-Dade County, F | 3.0 |
+| Miami | Little Havana | Southwest 8th Street, Little Havana, Latin Quarter, Miami, Miami-Dade County, Fl | 3.4 |
+| Miami | Zoo Miami | The Miami-Dade Zoological Park and Gardens, The Asian Trail, Miami-Dade County,  | 27.3 |
+| Miami | Everglades Safari Park | Everglades Safari Park, Southwest 8th Street, Miami-Dade County, Florida, United | 43.4 |
+| Miami | Fairchild Tropical Botanic Garden | Fairchild Tropical Botanic Garden, 10901, Old Cutler Road, Coral Gables, Miami-D | 13.4 |
+| Fort Lauderdale (Port Everglades) | Fort Lauderdale Beach | Fort Lauderdale Beach, Birch Ocean Front, Fort Lauderdale, Broward County, Flori | 6.1 |
+| Fort Lauderdale (Port Everglades) | Las Olas Boulevard | Las Olas Boulevard, East Las Olas Boulevard, Fort Lauderdale, Broward County, Fl | 3.0 |
+| Fort Lauderdale (Port Everglades) | Butterfly World | Butterfly World, 3600, West Sample Road, Coconut Creek, Broward County, Florida, | 19.6 |
+| Fort Lauderdale (Port Everglades) | Flamingo Gardens | Flamingo Gardens, Davie, Broward County, Florida, United States | 18.6 |
+| Fort Lauderdale (Port Everglades) | Everglades Holiday Park | Everglades Holiday Park, L-67A, Broward County, Florida, 33332, United States | 32.0 |
+| Fort Lauderdale (Port Everglades) | Bonnet House Museum and Gardens | Bonnet House Museum and Gardens, 900, Birch Ocean Front, Fort Lauderdale, Browar | 4.8 |
+| Port Canaveral | Kennedy Space Center Visitor Complex | Kennedy Space Center Visitor Complex (Visitor Entrance), 9500, Space Commerce Wa | 13.2 |
+| Port Canaveral | Cocoa Beach Pier | Cocoa Beach Pier, Meade Avenue, Cocoa Beach, Brevard County, Florida, 32931, Uni | 5.4 |
+| Port Canaveral | Merritt Island National Wildlife Refuge | Merritt Island National Wildlife Refuge, Brevard County, Florida, 32899, United  | 26.2 |
+| Port Canaveral | Canaveral National Seashore | Canaveral National Seashore, Oak Hill, Volusia County, Florida, United States | 56.5 |
+| Port Canaveral | Ron Jon Surf Shop | Ron Jon Surf Shop, 4151, North Atlantic Avenue, Cocoa Beach, Brevard County, Flo | 6.6 |
+| Port Canaveral | Cape Canaveral Lighthouse | Cape Canaveral Lighthouse, Lighthouse Road, Launch Complex 9, Brevard County, Fl | 8.0 |
+| Tampa | Ybor City | Ybor City, Tampa, Hillsborough County, Florida, 33605, United States | 2.4 |
+| Tampa | Florida Aquarium | Florida Aquarium, 701, Channelside Drive, Chamberlins, Harbour Island, Tampa, Hi | 1.3 |
+| Tampa | Tampa Riverwalk | Tampa Riverwalk, Riverside, Harbour Island, Tampa, Hillsborough County, Florida, | 0.5 |
+| Tampa | Busch Gardens Tampa Bay | Busch Gardens Tampa, Busch Gardens Drop Off/Pickup, Tampa, Hillsborough County,  | 10.9 |
+| Tampa | Clearwater Beach | Clearwater Beach, Clearwater, Pinellas County, Florida, 33767, United States | 36.5 |
+| Tampa | Lowry Park Zoo | ZooTampa at Lowry Park, 1101, West Sligh Avenue, Willow Pines, Sulphur Springs,  | 7.9 |
+| Seattle | Pike Place Market | Pike Place Market, 85, Pike Street, West Edge, Belltown, Seattle, King County, W | 1.1 |
+| Seattle | Space Needle | Space Needle, 400, Broad Street, South Lake Union, Cascade, Belltown, Seattle, K | 2.3 |
+| Seattle | Chihuly Garden and Glass | Chihuly Garden and Glass, 305, Harrison Street, Uptown, Belltown, Seattle, King  | 2.4 |
+| Seattle | Museum of Pop Culture | MoPOP: Museum of Pop Culture, 5th Avenue North, Belltown, Seattle, King County,  | 2.4 |
+| Seattle | Seattle Aquarium | Seattle Aquarium, 1483, Alaskan Way, West Edge, Belltown, Seattle, King County,  | 1.1 |
+| Seattle | Hiram M. Chittenden Locks | Hiram M. Chittenden Locks, 3015, Northwest 54th Street, Ballard, Seattle, King C | 8.6 |
+| Seattle | Kerry Park | Kerry Park, 211, Queen Anne, Seattle, King County, Washington, 98119, United Sta | 3.6 |
+| San Diego | San Diego Zoo | San Diego Zoo, 2920, Zoo Drive, Banker's Hill, San Diego, San Diego County, Cali | 2.6 |
+| San Diego | Balboa Park | Balboa Park, San Diego, San Diego County, California, United States | 2.4 |
+| San Diego | USS Midway Museum | USS Midway Museum, 910, North Harbor Drive, Downtown San Diego, San Diego, San D | 1.1 |
+| San Diego | Cabrillo National Monument | Cabrillo National Monument, San Diego, San Diego County, California, United Stat | 8.7 |
+| San Diego | Gaslamp Quarter | Gaslamp Quarter, Downtown San Diego, San Diego, San Diego County, California, Un | 0.6 |
+| San Diego | La Jolla Cove | La Jolla Cove, La Jolla, San Diego County, California, 02037, United States | 18.1 |
+| San Diego | Coronado Beach | Coronado Beach, Coronado, San Diego County, California, United States | 4.2 |
+| New York City (Manhattan) | Statue of Liberty | Statue of Liberty, Flagpole Plaza, Manhattan, New York County, New York, 10004,  | 9.5 |
+| New York City (Manhattan) | Central Park | Central Park, New York County, New York, 11025, United States | 3.3 |
+| New York City (Manhattan) | Metropolitan Museum of Art | The Metropolitan Museum of Art, 1000, 5th Avenue, Upper East Side, Manhattan Com | 3.3 |
+| New York City (Manhattan) | High Line | High Line, Chelsea District, Manhattan Community Board 4, Manhattan, New York Co | 1.3 |
+| New York City (Manhattan) | Times Square | Times Square, Manhattan Community Board 5, Manhattan, New York County, New York, | 1.6 |
+| New York City (Manhattan) | Brooklyn Bridge | Brooklyn Bridge, Manhattan Community Board 3, Manhattan, New York County, New Yo | 6.8 |
+| New York City (Manhattan) | Chelsea Market | Chelsea Market, 75, 9th Avenue, Chelsea District, Manhattan Community Board 4, M | 2.8 |
+| Boston | Freedom Trail | Freedom Trail, Government Center/Faneuil Hall, Downtown, Boston, Suffolk County, | 2.9 |
+| Boston | Boston Public Garden | Boston Public Garden, 4, Beacon Hill, Boston, Suffolk County, Massachusetts, 021 | 3.4 |
+| Boston | Faneuil Hall Marketplace | Faneuil Hall Marketplace, 1, Faneuil Hall Square, Government Center/Faneuil Hall | 2.7 |
+| Boston | New England Aquarium | New England Aquarium, 1, Boston HarborWalk, Waterfront, Downtown, Boston, Suffol | 2.3 |
+| Boston | Fenway Park | Fenway Park, 4, Jersey Street, Fenway-Kenmore, Boston, Suffolk County, Massachus | 5.5 |
+| Boston | Harpoon Brewery | Harpoon Brewery, 306, Northern Avenue, Seaport, Boston, Suffolk County, Massachu | 0.4 |
+| Boston | Museum of Fine Arts | Museum of Fine Arts, 465, Huntington Avenue, Fenway-Kenmore, Boston, Suffolk Cou | 5.2 |
+| Juneau | Mendenhall Glacier | Mendenhall Glacier Visitor Center, Trail of Time, Juneau, Alaska, United States | 14.8 |
+| Juneau | Mount Roberts Tramway | Goldbelt Tram, 490, South Franklin Street, Downtown, Juneau, Alaska, 99801, Unit | 1.3 |
+| Juneau | Alaska State Museum | Alaska State Museum, 395, Whittier Street, Downtown, Juneau, Alaska, 99801, Unit | 0.3 |
+| Juneau | Alaskan Brewing Company | Alaskan Brewing Co, Marine Way, Downtown, Juneau, Alaska, 99802, United States | 0.8 |
+| Juneau | St. Nicholas Russian Orthodox Church | St. Nicholas Orthodox Church, 326, 5th Street, Chicken Ridge Neighborhood, Downt | 0.6 |
+| Ketchikan | Creek Street | Creek Street, Ketchikan, Ketchikan Gateway Borough, Alaska, 99901, United States | 0.3 |
+| Ketchikan | Totem Bight State Historical Park | Totem Bight, Mud Bay, Ketchikan Gateway Borough, Alaska, 99928, United States | 11.9 |
+| Ketchikan | Saxman Native Village | Saxman Native Village Gift Shop, Killer Whale Avenue, Saxman, Ketchikan Gateway  | 4.1 |
+| Ketchikan | Misty Fjords | Misty Fjords National Monument Wilderness, Alaska, United States | 82.1 |
+| Ketchikan | Tongass Historical Museum | Tongass Historical Museum, 629, Dock Street, Ketchikan, Ketchikan Gateway Boroug | 0.2 |
+| Ketchikan | Ketchikan Lumberjack Show | Great Alaskan Lumberjack Show, Bawden Street, Ketchikan, Ketchikan Gateway Borou | 0.4 |
+| Ketchikan | Ketchikan Salmon Ladder | Ketchikan Creek, Ketchikan, Ketchikan Gateway Borough, Alaska, United States | 1.0 |
+| Skagway | White Pass and Yukon Route Railroad | White Pass and Yukon Route Railroad Station, 231, 2nd Avenue, Skagway, Alaska, 9 | 0.5 |
+| Skagway | Gold Rush Cemetery | Gold Rush Cemetery, Alaska Street, Skagway, Alaska, 99840, United States | 2.2 |
+| Skagway | Skagway Museum | City of Skagway Museum, 700, Spring Street, Skagway, Alaska, 99840, United State | 0.1 |
+| Skagway | Dyea | Dyea Historic Townsite Road, Skagway, Alaska, 99840, United States | 6.2 |
+| Skagway | Red Onion Saloon | Red Onion Saloon, 205, Broadway, Skagway, Alaska, 99840, United States | 0.5 |
+| Sitka | Sitka National Historical Park | Sitka National Historical Park, Sitka, Alaska, United States | 0.3 |
+| Sitka | Alaska Raptor Center | Alaska Raptor Center, 1000, Sawmill Creek Road, Sitka, Alaska, 99835, United Sta | 0.8 |
+| Sitka | St. Michael's Cathedral | Saint Michael's Russian Orthodox Cathedral, 240, Lincoln Street, Sitka, Alaska,  | 0.4 |
+| Sitka | Sheldon Jackson Museum | Sheldon Jackson Museum, 104, College Drive, Sitka, Alaska, 99835, United States | 0.4 |
+| Honolulu | Pearl Harbor National Memorial | Pearl Harbor National Memorial, Arizona Street, Āliamanu, Aiea, Honolulu County, | 10.1 |
+| Honolulu | Diamond Head State Monument | Diamond Head State Monument, Kaimukī, East Honolulu, Honolulu, Honolulu County,  | 7.8 |
+| Honolulu | Waikiki Beach | Waikīkī Beach, Waikīkī, East Honolulu, Honolulu, Honolulu County, Hawaii, United | 5.6 |
+| Honolulu | Iolani Palace | ʻIolani Palace, 364, South King Street, Downtown, Hawaii Capital Historic Distri | 0.7 |
+| Honolulu | Hanauma Bay Nature Preserve | Hanauma Bay, East Honolulu, Kailua, Honolulu County, Hawaii, 96825, United State | 18.3 |
+| Honolulu | Honolulu Zoo | Honolulu Zoo, 151, Kapahulu Avenue, Kapahulu, East Honolulu, Honolulu, Honolulu  | 6.2 |
+| Honolulu | Foster Botanical Garden | Foster Botanical Garden, Hawaii Capital Historic District, East Honolulu, Honolu | 1.3 |
+| Kahului, Maui | Iao Valley State Monument | ʻĪao Valley State Monument, Maui County, Hawaii, United States | 8.0 |
+| Kahului, Maui | Haleakala National Park | Haleakalā National Park, Maui County, Hawaii, United States | 41.5 |
+| Kahului, Maui | Lahaina Banyan Court | Lahaina Banyan Court, Lahaina, Maui County, Hawaii, United States | 21.5 |
+| Kahului, Maui | Maui Ocean Center | Maui Ocean Center, Maalaea Road, Maʻalaea, Maui County, Hawaii, United States | 12.2 |
+| Kahului, Maui | Ho'okipa Beach | Hookipa Park Beach, Kuau, Maui County, Hawaii, United States | 12.8 |
+| Kahului, Maui | Maui Tropical Plantation | Maui Tropical Plantation, 1670, Honoapiilani Highway, Waikapu, Maui County, Hawa | 6.3 |
+| Kailua-Kona | Pu'uhonua o Honaunau National Historical Park | Pu'uhonua O Honaunau National Historic Park Headquarters, State Route 163, Hōnau | 25.8 |
+| Kailua-Kona | Kona coffee farm Greenwell | Greenwell Farms, 81-6581, Mamalahoa Highway, Kealakekua, Hawaiʻi County, Hawaii, | 16.2 |
+| Kailua-Kona | Kealakekua Bay | Kealakekua Bay State Historical Park, Nāpō‘opo‘o, Honaunau-Napoopoo, Hawaiʻi Cou | 18.7 |
+| Kailua-Kona | Magic Sands Beach | Magic Sands Beach, Kahaluʻu, Kahaluu-Keauhou, Hawaiʻi County, Hawaii, United Sta | 5.6 |
+| Hilo | Hawaii Volcanoes National Park | Hawaiʻi Volcanoes National Park, Hawaiʻi County, Hawaii, 96718, United States | 57.5 |
+| Hilo | Rainbow Falls | Rainbow Falls, Hilo, Hawaiʻi County, Hawaii, 96720, United States | 3.2 |
+| Hilo | Akaka Falls State Park | ʻAkaka Falls State Park, Hawaiʻi County, Hawaii, United States | 18.0 |
+| Hilo | Lyman Museum | Lyman Museum, 276, Haili Street, Downtown Hilo, Pu‘u‘eo, Hilo, Hawaiʻi County, H | 1.9 |
+| Hilo | Hilo Farmers Market | Hilo Farmers Market - Crafts, 20, Mamo Street, Downtown Hilo, Pu‘u‘eo, Hilo, Haw | 1.8 |
+| Hilo | Liliuokalani Gardens | Liliʻuokalani Gardens, Mokaoku, Hilo, Hawaiʻi County, Hawaii, United States | 2.5 |
+| Hilo | Mauna Loa Macadamia Nut Factory | Mauna Loa Macadamia Nut Factory, Macadamia Nut Road, Hawaiʻi County, Hawaii, 967 | 9.5 |
+| Victoria, BC | Butchart Gardens | The Butchart Gardens, 800, Central Saanich, Capital Regional District, British C | 17.1 |
+| Victoria, BC | Royal BC Museum | Royal BC Museum, 675, Belleville Street, James Bay, Victoria, Capital Regional D | 1.0 |
+| Victoria, BC | Craigdarroch Castle | Craigdarroch Castle, 1048, Joan Crescent, Rockland, Victoria, Capital Regional D | 1.7 |
+| Victoria, BC | Inner Harbour | Victoria Inner Harbour - xʷsey̓’əm, Victoria, Capital Regional District, British | 0.7 |
+| Victoria, BC | Beacon Hill Park | Beacon Hill Park, 100, Fairfield, Victoria, Capital Regional District, British C | 1.8 |
+| Victoria, BC | Fisherman's Wharf | Fisherman's Wharf, B, James Bay, Victoria, Capital Regional District, British Co | 1.4 |
+| Vancouver | Stanley Park | Stanley Park, West End, Vancouver, Metro Vancouver Regional District, British Co | 2.3 |
+| Vancouver | Capilano Suspension Bridge | Capilano Suspension Bridge Park, 3735, Edgemont Village, North Vancouver, Metro  | 6.0 |
+| Vancouver | Granville Island Public Market | Granville Island, Fairview, Vancouver, Metro Vancouver Regional District, Britis | 2.3 |
+| Vancouver | Gastown | Gastown, Downtown, Vancouver, Metro Vancouver Regional District, British Columbi | 0.9 |
+| Vancouver | Vancouver Aquarium | Vancouver Aquarium, 845, Avison Way, Vancouver, Metro Vancouver Regional Distric | 1.7 |
+| Vancouver | Grouse Mountain | Grouse Mountain, District of North Vancouver, Metro Vancouver Regional District, | 10.5 |
+| Halifax | Halifax Citadel National Historic Site | Halifax Citadel National Historic Site, Ta13 Road, Halifax Citadel National Hist | 0.5 |
+| Halifax | Halifax Waterfront Boardwalk | Halifax Waterfront Boardwalk, Downtown Halifax, Halifax, Halifax Regional Munici | 1.0 |
+| Halifax | Peggy's Cove Lighthouse | Peggy's Cove Lighthouse, Peggys Cove, Halifax Regional Municipality, Halifax Cou | 31.6 |
+| Halifax | Halifax Public Gardens | Halifax Public Gardens, Spring Garden Road, Downtown Halifax, Halifax, Halifax R | 0.7 |
+| Halifax | Maritime Museum of the Atlantic | Maritime Museum of the Atlantic, 1675, Lower Water Street, Downtown Halifax, Hal | 1.2 |
+| Halifax | Pier 21 Canadian Museum of Immigration | Canadian Museum of Immigration at Pier 21, 1055, Marginal Road, South End, Halif | 2.0 |
+| Bar Harbor | Acadia National Park Cadillac Mountain | Experience Acadia, Cadillac Summit Road, Bar Harbor, Hancock County, Maine, 0460 | 4.7 |
+| Bar Harbor | Jordan Pond House | Jordan Pond House, 2928, Park Loop Road, Bar Harbor, Hancock County, Maine, 0460 | 8.9 |
+| Bar Harbor | Bass Harbor Head Light | Bass Harbor Head Light, Base Trail, Tremont, Hancock County, Maine, 04653, Unite | 21.7 |
+| Bar Harbor | Sand Beach | Sand Beach, Bar Harbor, Hancock County, Maine, United States | 7.2 |
+| Bar Harbor | Thunder Hole | Thunder hole, 1411, Park Loop Road, Bar Harbor, Hancock County, Maine, 04609, Un | 7.9 |
+| Bar Harbor | Abbe Museum | Abbe Museum, 26, Mount Desert Street, Bar Harbor, Hancock County, Maine, 04609,  | 0.6 |
+| Bar Harbor | Bar Harbor Shore Path | Shore Path, Bar Harbor, Hancock County, Maine, 04644, United States | 0.6 |
+
+### Searched and left out (24)
+
+| Port | Place | Why |
+|---|---|---|
+| Nassau | Graycliff Chocolatier and Cigar | no match |
+| George Town, Grand Cayman | Seven Mile Beach | no match |
+| George Town, Grand Cayman | Cayman Turtle Conservation and Education Centre | rejected: matched a dive shop |
+| George Town, Grand Cayman | Rum Point | rejected: matched a condo |
+| Roatan | Roatan Institute of Marine Sciences | rejected: matched a different institute |
+| Belize City | Belize Zoo | rejected: matched the zoo's lodge |
+| Ocho Rios | Blue Hole Ocho Rios | rejected: matched a Blue Hole in another parish |
+| Ocho Rios | Prospect Plantation | no match |
+| Philipsburg, St. Maarten | Butterfly Farm | no match |
+| San Juan | Casa Bacardi Distillery | no match |
+| Key West | Ernest Hemingway Home and Museum | no match |
+| Royal Naval Dockyard, Bermuda | National Museum of Bermuda | rejected: matched the wrong museum |
+| Puerto Vallarta | Yelapa | rejected: matched a city neighborhood, not the village |
+| Mazatlan | Old Mazatlan | no match |
+| Ensenada | Riviera del Pacifico | rejected: matched another Riviera |
+| Ensenada | Valle de Guadalupe | rejected: matched far from Ensenada |
+| Juneau | Glacier Gardens Rainforest Adventure | no match |
+| Juneau | Macaulay Salmon Hatchery | no match |
+| Skagway | Klondike Gold Rush National Historical Park | rejected: the only hit is the park's centroid on the Chilkoot Trail, not the visitor center |
+| Sitka | Fortress of the Bear | no match |
+| Sitka | Sitka Sound Cruises | rejected: matched a Coast Guard office |
+| Kahului, Maui | Kaanapali Beach | rejected: matched a hotel |
+| Kailua-Kona | Hulihee Palace | no match |
+| Kailua-Kona | Kona Farmers Market | no match |

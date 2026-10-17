@@ -109,6 +109,13 @@ def main():
             page.wait_for_selector(".card.dest.pick")
             page.evaluate("window.scrollTo(0, document.querySelector('.where').getBoundingClientRect().top + window.scrollY - 140)")
             shot("11-city")
+            # Cruise Day: one port, three ways to spend the day
+            page.click("#tabs [data-tab=cruise]")
+            page.select_option("[data-bind='profile.cruise.portId']", "grand-cayman")
+            page.select_option("[data-bind='profile.cruise.line']", "Carnival")
+            page.dispatch_event("[data-bind='profile.cruise.line']", "change")
+            page.evaluate("window.scrollTo(0, document.querySelector('#cruiseOut').getBoundingClientRect().top + window.scrollY - 90)")
+            shot("12-cruise")
             ctx.close()
 
         # tablet, portrait

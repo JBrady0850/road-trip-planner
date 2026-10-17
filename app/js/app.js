@@ -6,7 +6,7 @@
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.5.1";
+  const APP_VERSION = "0.6.0";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
   const ICONS = new Set(RT.INTERESTS.map(i => i[0]));
   const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" || k === "pin" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
@@ -20,7 +20,7 @@
     tab: saved.trip ? "trip" : "interview", startDate: saved.startDate || nextFriday(), nights: saved.nights || 4, month: null, busy: "", details: false, open: new Set(), tripHint: false,
     fb: Object.assign({ task: "", ease: "", liked: "", problems: "", ideas: "", device: "", includeTrip: true }, saved.fb || {})
   };
-  ["rules","vehicle","lodging","dining","home"].forEach(k => st.profile[k] = Object.assign(RT.defaultProfile()[k], (saved.profile || {})[k] || {}));
+  ["rules","vehicle","lodging","dining","home","cruise"].forEach(k => st.profile[k] = Object.assign(RT.defaultProfile()[k], (saved.profile || {})[k] || {}));
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify({ profile: st.profile, trip: st.trip, routes: st.routes, startDate: st.startDate, nights: st.nights, fb: st.fb })); } catch (e) { /* storage blocked: keep working in memory */ } };
   function nextFriday() { const d = new Date(); d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7) + 28); return d.toISOString().slice(0, 10); }
 
@@ -67,7 +67,7 @@
   $("#tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); });
 
   function render() {
-    const fn = { interview: vInterview, destinations: vDestinations, trip: vTrip, navigate: vNavigate, weather: vWeather, budget: vBudget, tracker: vTracker, settings: vSettings, feedback: vFeedback }[st.tab];
+    const fn = { interview: vInterview, destinations: vDestinations, trip: vTrip, navigate: vNavigate, weather: vWeather, budget: vBudget, tracker: vTracker, cruise: vCruise, settings: vSettings, feedback: vFeedback }[st.tab];
     view.innerHTML = fn() + stepBar(st.tab);
     persist();
   }
@@ -151,10 +151,87 @@
     return `<nav class="stepbar noprint" aria-label="Planning steps"><div class="step-where"><span class="step-count">Step ${i + 1} of ${n}</span><span class="step-name">${esc(FLOW[i][1])}</span><span class="dots" aria-hidden="true">${dots}</span></div><div class="step-actions">${back}${go}</div></nav>`;
   }
 
+  // ---------- cruise port day ----------
+  // The Cruise Day tab: a port, the ship's arrival and departure, and the same
+  // interests as a road trip. Places are fitted between "off the ship" and "all
+  // aboard" three ways (RT.portDay). A port that is not listed is looked up once; the
+  // answer is dropped if the typed text changed meanwhile (lesson L-029).
+  const cruiseTypedPort = () => {
+    const c = st.profile.cruise, pl = c.place;
+    if (c.portId || !pl || pl.missing || pl.q !== (c.typed || "").trim() || !Number.isFinite(+pl.lat) || !Number.isFinite(+pl.lon)) return null;
+    const abbr = RT_STATE_BY_ABBR[pl.abbr] ? pl.abbr : "";
+    const d = RT.cityDestination({ label: String(pl.label), lat: +pl.lat, lon: +pl.lon, abbr }, RT_CATALOG);
+    return { id: "typed", name: String(pl.label), region: "Your port", country: "", tender: "unknown", left: false, address: String(pl.label), lat: +pl.lat, lon: +pl.lon, stops: d.stops };
+  };
+  const cruisePort = () => { const c = st.profile.cruise; return c.portId ? RT_PORTS.find(x => x.id === c.portId) || null : cruiseTypedPort(); };
+  const cruiseOpts = () => { const c = st.profile.cruise; return { arrive: c.arrive, depart: c.depart, buffer: +c.buffer, line: c.line }; };
+  const cruiseDate = () => st.profile.cruise.date || st.startDate;
+  const planBlurb = {
+    excursion: "Book through the cruise line. The line times the return to the ship; ask it what happens if a tour runs late.",
+    driver: "A taxi or hired driver takes you to each place and waits. Agree the price and the return time before you leave the pier.",
+    rental: "You drive yourself. Allow time to pick up and return the car, and to park at each place."
+  };
+  function cruiseOut() {
+    const c = st.profile.cruise, port = cruisePort();
+    if (!port) {
+      const miss = c.place && c.place.missing && c.place.q === (c.typed || "").trim();
+      return `<div class="card"><p class="muted">${miss ? `Could not find ${esc(c.typed)}. Check the spelling, or pick a port from the list.` : "Pick your port above, or type a port or town and tap Find."}</p></div>`;
+    }
+    const d = RT.portDay(st.profile, port, cruiseOpts()), tn = RT.TENDER[port.tender] || RT.TENDER.unknown, links = RT.portLinks(port, c.line);
+    const allAboard = U.fromMin(U.toMin(c.depart) - (+c.buffer || 0));
+    const head = d.windowMin > 0 ? `<p><b>Off the ship about ${U.hm12(d.ashore)}</b> Be back at the pier by <b>${U.hm12(d.backBy)}</b> All aboard is ${U.hm12(allAboard)}, and the ship leaves at ${U.hm12(c.depart)} You have about ${Math.floor(d.windowMin / 60)} h ${d.windowMin % 60} min ashore.</p>` : "";
+    const notes = [`<li><b>${esc(tn[0])}.</b> ${esc(tn[1])}</li>`, ...d.warnings.map(w => `<li>${esc(w)}</li>`)].join("");
+    const cards = d.plans.map(pl => {
+      const cost = pl.cost ? `<p class="small cost">Rough estimate: ${money(pl.cost[0])} to ${money(pl.cost[1])}${pl.key === "driver" ? " for the vehicle" : " for the day, with fuel and parking"}. Prices vary: confirm before you go.</p>` : `<p class="small cost">Price: see the cruise line's page.</p>`;
+      const stops = pl.stops.map(s => `<li><b>${U.hm12(s.arrive)}</b> ${esc(s.name)} <span class="small muted">(${s.minutes} min)</span></li>`).join("");
+      const lk = pl.key === "excursion" ? `${links.lines.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a></li>`).join("")}<li><a href="${esc(links.lineSearch)}" target="_blank" rel="noopener">Search ${esc(port.name)} excursions on the web</a></li><li><a href="${esc(links.independent)}" target="_blank" rel="noopener">Independent local tours (web search)</a></li>`
+        : pl.key === "driver" ? `<li><a href="${esc(links.taxi)}" target="_blank" rel="noopener">Taxi and private drivers near the pier (map)</a></li><li><a href="${esc(links.independent)}" target="_blank" rel="noopener">Private tours for cruise passengers (web search)</a></li>`
+        : `<li><a href="${esc(links.rental)}" target="_blank" rel="noopener">Car rental near the pier (map)</a></li>`;
+      return `<div class="card plan-card" data-plan="${pl.key}"><h3>${esc(pl.label)}</h3><p class="small muted">${esc(planBlurb[pl.key])}</p>
+        <p class="small">Back at the pier about <b>${U.hm12(pl.backAboard)}</b> (${pl.spareMin} min to spare).</p>
+        ${pl.stops.length ? `<ol class="plan-stops">${stops}</ol>` : `<p class="small">No catalog places fit within reach of this port. Open it as an itinerary and add your own stops.</p>`}${cost}<ul class="small links">${lk}</ul>
+        <button class="btn" data-act="cruiseUse" data-plan="${pl.key}">Use this plan as my itinerary</button></div>`;
+    }).join("");
+    return `<div class="card"><h2 style="margin-top:0">${esc(port.name)}</h2>${head}<ul class="small cruise-notes">${notes}</ul>
+      <p class="small muted">Times, prices, and whether a ship docks or anchors are estimates: confirm each on your ship's daily schedule. Place hours and fees change.</p></div>
+      ${d.plans.length ? `<div class="plan-grid">${cards}</div>` : ""}`;
+  }
+  function vCruise() {
+    const p = st.profile, c = p.cruise, regions = [...new Set(RT_PORTS.map(x => x.region))];
+    const ports = regions.map(r => `<optgroup label="${esc(r)}">${RT_PORTS.filter(x => x.region === r).map(x => `<option value="${esc(x.id)}" ${c.portId === x.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</optgroup>`).join("");
+    const lines = ["", ...RT.CRUISE_LINES.map(l => l[0])].map(l => `<option value="${esc(l)}" ${c.line === l ? "selected" : ""}>${l || "Not sure or other"}</option>`).join("");
+    const buf = [30, 45, 60, 90].map(m => `<option value="${m}" ${+c.buffer === m ? "selected" : ""}>${m} minutes</option>`).join("");
+    return `<h1>Cruise port day</h1>
+      <div class="card"><p class="muted">Give your port and the ship's times. The app fits places between getting off the ship and the all-aboard time, three ways: a cruise-line excursion, a private driver or taxi, or a rental car.</p>
+        <div class="row">${field("Port", `<select data-bind="profile.cruise.portId" data-rescore="1"><option value="">Not listed: type it on the right</option>${ports}</select>`)}
+        ${field("Port not listed? Type the port or town", `<div class="row"><input type="text" data-bind="profile.cruise.typed" value="${esc(c.typed)}" placeholder="e.g. Charlottetown" autocomplete="off" enterkeyhint="go"><button class="btn" data-act="cruiseFind">Find</button></div>`)}</div>
+        <div class="row">${field("Port date", `<input type="date" data-bind="profile.cruise.date" data-rescore="1" value="${esc(cruiseDate())}">`)}
+        ${field("Ship arrives", `<input type="time" data-bind="profile.cruise.arrive" data-rescore="1" value="${esc(c.arrive)}">`)}
+        ${field("Ship leaves", `<input type="time" data-bind="profile.cruise.depart" data-rescore="1" value="${esc(c.depart)}">`)}
+        ${field("All aboard before departure", `<select data-bind="profile.cruise.buffer" data-rescore="1">${buf}</select>`)}
+        ${field("Cruise line", `<select data-bind="profile.cruise.line" data-rescore="1">${lines}</select>`)}</div>
+        <p class="small muted">Use the times on your ship's daily schedule. Most ships want everyone aboard 30 to 60 minutes before they leave.</p>
+        <h2>What do you enjoy?</h2>${interestChips(p, false)}</div>
+      <div id="cruiseOut" aria-live="polite">${cruiseOut()}</div>`;
+  }
+  let cruiseLooking = null;
+  async function cruiseFind() {
+    const c = st.profile.cruise, f = $("[data-bind='profile.cruise.typed']"); if (f) c.typed = f.value;
+    const q = (c.typed || "").trim();
+    if (!q) { toast("Type a port or town first"); return; }
+    c.portId = ""; c.place = null; toast(`Looking up ${q}…`);
+    let r = null, failed = false;
+    try { r = (await RT.services.geocode(q, true))[0]; } catch (e) { failed = true; }
+    if ((c.typed || "").trim() !== q || c.portId) return; // changed while the map answered: ignore this answer
+    if (r) { const ab = r.state && RT_STATE_BY_NAME[r.state.toLowerCase()]; c.place = { q, label: [r.label.split(",")[0].trim(), ab ? ab.abbr : (r.state || r.country)].filter(Boolean).join(", "), lat: r.lat, lon: r.lon, abbr: ab ? ab.abbr : "" }; }
+    else { c.place = { q, missing: true }; toast(failed ? `Could not look up ${q} right now. Check the connection and try again.` : `Could not find ${q}. Check the spelling, or pick a port from the list.`); }
+    if (st.tab === "cruise") render(); else persist();
+  }
+
   // ---------- interview ----------
   const chip = (act, k, label, on, extra = "") => `<button class="chip" data-act="${act}" data-k="${k}" aria-pressed="${on}" ${extra}>${icon(k)}${label}</button>`;
   // The fishing license note sits right under the group that holds the Fishing chip.
-  const interestChips = p => RT.INTEREST_GROUPS.map(([g, list]) => `<div class="chip-group"><h3 class="chip-head">${esc(g)}</h3><div class="chips">${list.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div>${list.some(i => i[0] === "fishing") ? `<div id="fishPlan" aria-live="polite">${fishPlan(p)}</div>` : ""}</div>`).join("");
+  const interestChips = (p, fish = true) => RT.INTEREST_GROUPS.map(([g, list]) => `<div class="chip-group"><h3 class="chip-head">${esc(g)}</h3><div class="chips">${list.map(([k, l]) => chip("interest", k, l, p.interests.includes(k))).join("")}</div>${fish && list.some(i => i[0] === "fishing") ? `<div id="fishPlan" aria-live="polite">${fishPlan(p)}</div>` : ""}</div>`).join("");
   // Where to: a state narrows the ranking; a town, when the traveler knows it, goes first.
   const cityOptions = state => [...new Set(RT_CATALOG.filter(d => !state || d.states.includes(state)).map(d => d.base[0]))].sort().map(c => `<option value="${esc(c)}"></option>`).join("");
   function whereTo(p, id) {
@@ -527,12 +604,19 @@
       try { home = await RT.services.reverse(pos.lat, pos.lon); } catch (e) { /* keep the coordinates; the town name is a nicety */ }
       setHome(home);
     },
-    interest: el => { const k = el.dataset.k, a = st.profile.interests; const i = a.indexOf(k); i >= 0 ? a.splice(i, 1) : a.push(k); el.setAttribute("aria-pressed", String(i < 0)); st.recs = []; if (st.tab === "destinations") render(); else { const box = $("#fishPlan"); if (box) box.innerHTML = fishPlan(st.profile); persist(); } },
+    interest: el => { const k = el.dataset.k, a = st.profile.interests; const i = a.indexOf(k); i >= 0 ? a.splice(i, 1) : a.push(k); el.setAttribute("aria-pressed", String(i < 0)); st.recs = []; if (st.tab === "destinations") render(); else if (st.tab === "cruise") { $("#cruiseOut").innerHTML = cruiseOut(); persist(); } else { const box = $("#fishPlan"); if (box) box.innerHTML = fishPlan(st.profile); persist(); } },
     pace: el => { RT.applyPace(st.profile, el.dataset.k); st.details = true; st.recs = []; render(); toast(`${RT.PACE[el.dataset.k].label} pace set`); },
     comfort: el => { RT.applyComfort(st.profile, el.dataset.k, +st.nights); st.details = true; render(); toast(`${RT.COMFORT[el.dataset.k].label}: budget cap now ${money(st.profile.rules.budgetCap)}`); },
     toggleState: el => { const a = st.profile.visited, s = el.dataset.s, i = a.indexOf(s); i >= 0 ? a.splice(i, 1) : a.push(s); st.recs = []; render(); },
     findDest: async () => { const f = $("[data-bind='profile.destCity']"); if (f) st.profile.destCity = f.value; if (st.profile.home.lat == null) { toast("Tell the app where you start: type your town or tap Use my location"); const q = $("#homeQ"); if (q) q.focus(); return; } st.recs = []; await resolveCity(); setTab("destinations"); },
     startOver: () => { st.recs = []; setTab("interview"); },
+    cruiseFind: () => cruiseFind(),
+    cruiseUse: el => {
+      const port = cruisePort(); if (!port) return;
+      const t = RT.portTrip(st.profile, port, cruiseOpts(), cruiseDate(), el.dataset.plan); if (!t) return;
+      st.trip = t; st.routes = {}; st.weather = []; st.open = new Set(); st.tripHint = false;
+      runCheck(); setTab("trip");
+    },
     build: async el => {
       const r = st.recs[+el.dataset.i]; if (!r) return;
       st.trip = RT.draftTrip(st.profile, r.dest, st.startDate, +st.nights, RT_CATALOG); st.routes = {}; st.weather = []; st.open = new Set();
