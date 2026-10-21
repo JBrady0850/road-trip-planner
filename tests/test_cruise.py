@@ -17,8 +17,10 @@ INTERESTS = {"scenic", "parks", "hiking", "waterfalls", "caves", "wildlife", "ga
 LINES = {"Royal Caribbean": "royalcaribbean.com", "Carnival": "carnival.com", "Norwegian": "ncl.com",
          "Princess": "princess.com", "Holland America": "hollandamerica.com", "Celebrity": "celebritycruises.com",
          "Disney": "disneycruise.disney.go.com", "Viking": "vikingcruises.com", "MSC": "msccruisesusa.com"}
-HAMILTON = [{"display_name": "Charlottetown, Prince Edward Island, Canada", "lat": "46.2382", "lon": "-63.1311",
-             "address": {"city": "Charlottetown", "state": "Prince Edward Island", "country": "Canada"}}]
+# A port that is not on the list (Charlottetown joined the list in 0.7.0). Nominatim
+# answer for "Saguenay, Quebec", 2026-10-20.
+UNLISTED_PORT = [{"display_name": "Saguenay, Saguenay–Lac-Saint-Jean, Quebec, Canada", "lat": "48.406", "lon": "-71.0692",
+             "address": {"city": "Saguenay", "state": "Quebec", "country": "Canada", "country_code": "ca"}}]
 LOOKUPS = []
 
 
@@ -31,7 +33,7 @@ def page():
         def nominatim(route):
             q = parse_qs(urlparse(route.request.url).query).get("q", [""])[0]
             LOOKUPS.append(q)
-            body = HAMILTON if q.lower().startswith("charlottetown") else []
+            body = UNLISTED_PORT if q.lower().startswith("saguenay") else []
             route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
         pg.route("https://nominatim.openstreetmap.org/**", nominatim)
         pg.route("https://router.project-osrm.org/**", lambda r: r.abort())
@@ -236,11 +238,11 @@ def test_a_port_that_is_not_listed_is_looked_up_once(page):
     open_cruise(page)
     LOOKUPS.clear()
     page.select_option("[data-bind='profile.cruise.portId']", "")
-    page.fill("[data-bind='profile.cruise.typed']", "Charlottetown")
+    page.fill("[data-bind='profile.cruise.typed']", "Saguenay")
     page.locator("[data-bind='profile.cruise.typed']").dispatch_event("change")
     page.click("[data-act=cruiseFind]")
-    page.wait_for_function("document.querySelector('#cruiseOut') && document.querySelector('#cruiseOut').innerText.includes('Charlottetown')", timeout=10000)
-    assert any(q.lower().startswith("charlottetown") for q in LOOKUPS), LOOKUPS
+    page.wait_for_function("document.querySelector('#cruiseOut') && document.querySelector('#cruiseOut').innerText.includes('Saguenay')", timeout=10000)
+    assert any(q.lower().startswith("saguenay") for q in LOOKUPS), LOOKUPS
     assert "Dock or tender not confirmed" in page.inner_text("#cruiseOut")
     assert "No catalog places fit within reach" in page.inner_text("#cruiseOut"), "a port with no nearby places says so"
 
@@ -261,7 +263,7 @@ def test_a_lookup_answer_for_old_text_is_dropped(page):
     page.unroute("https://nominatim.openstreetmap.org/**")
     page.route("https://nominatim.openstreetmap.org/**", lambda route: held.append(route))
     page.select_option("[data-bind='profile.cruise.portId']", "")
-    page.fill("[data-bind='profile.cruise.typed']", "Charlottetown")
+    page.fill("[data-bind='profile.cruise.typed']", "Saguenay")
     page.locator("[data-bind='profile.cruise.typed']").dispatch_event("change")
     page.click("[data-act=cruiseFind]")
     for _ in range(50):
@@ -269,7 +271,7 @@ def test_a_lookup_answer_for_old_text_is_dropped(page):
         page.wait_for_timeout(100)
     assert held, "the lookup is waiting for an answer"
     page.evaluate("RT.state.profile.cruise.typed = 'Somewhere else'")
-    held[0].fulfill(status=200, content_type="application/json", body=json.dumps(HAMILTON))
+    held[0].fulfill(status=200, content_type="application/json", body=json.dumps(UNLISTED_PORT))
     page.wait_for_timeout(500)
     assert page.evaluate("RT.state.profile.cruise.place") is None, "the answer for the old text is not used"
 

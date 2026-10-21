@@ -20,7 +20,7 @@
     await throttle();
     const email = settings().contactEmail ? `&email=${encodeURIComponent(settings().contactEmail)}` : "";
     const res = await getJSON(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1${world ? "" : "&countrycodes=us"}&limit=5&q=${encodeURIComponent(q)}${email}`);
-    return res.map(x => ({ label: x.display_name, lat: +x.lat, lon: +x.lon, state: (x.address && (x.address.state || "")) || "", country: (x.address && x.address.country) || "" }));
+    return res.map(x => ({ label: x.display_name, lat: +x.lat, lon: +x.lon, state: (x.address && (x.address.state || "")) || "", country: (x.address && x.address.country) || "", cc: (x.address && x.address.country_code) || "" }));
   };
 
   // Name the town at a point (used once after "Use my location"; nothing else leaves the device).

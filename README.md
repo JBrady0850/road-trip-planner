@@ -170,12 +170,20 @@ works: upload the `app` folder as is.
    your cap, plus a booking checklist with lodging search links (and fishing license
    links when you fish). You book; the app never reserves or pays.
 9. **Cruise port days:** pick **Cruise port** in Where to on step 1, or open the
-   **Cruise Day** tab, to plan one day in port. Pick a port from
-   40 (Caribbean, Mexico, Alaska, Hawaii, Canada and New England, and US homeports),
-   or type any port or town. Enter when the ship arrives and leaves; the app allows
+   **Cruise Day** tab, to plan one day in port. Pick a port from 192 in the
+   Caribbean, Mexico, Central and South America, Canada and New England, Alaska,
+   Hawaii, US homeports, the Mediterranean and Atlantic islands, Northern Europe and
+   the British Isles, Asia and the Pacific, and Africa and the Middle East. Or type
+   the port or town and tap **Find** (or press Enter or Go): a name on the list, such
+   as "Montego Bay Jamaica" or "Rome", picks that port. Any other port is found on
+   OpenStreetMap and borrows the places of listed ports in the same country within
+   about an hour in a straight line; some may be across water, so check that you can
+   reach each one. Enter when the ship arrives and leaves; the app allows
    15 minutes to get off the ship, extra time for tender boats, and an all-aboard
    buffer you choose (30 to 90 minutes). It fits places that match the same 24
-   interests between those times, three ways side by side: a **cruise excursion**
+   interests between those times; when too few match, it fills the day with other
+   nearby places and marks each one **Not one of your interests**. The plans come
+   three ways side by side: a **cruise excursion**
    (links to the shore excursion pages of nine cruise lines, plus web searches), a
    **private driver or taxi** (with Viator and GetYourGuide searches for the port),
    and a **rental car**. Each plan shows when you are
@@ -211,7 +219,7 @@ address and booking numbers. To send code or catalog changes, see
 app/                 the app (open index.html)
   data/catalog.js    destinations: edit or add your own
   data/states.js     50 states, road-condition links, fishing license pages
-  data/ports.js      40 cruise ports with places near each (Cruise Day tab)
+  data/ports.js      192 cruise ports with places near each (Cruise Day tab)
   js/engine.js       scoring, drafting, checker, links, exports (no network)
   js/services.js     place search, routing, weather, optional AI
   js/app.js          interface

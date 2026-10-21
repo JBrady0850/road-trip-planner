@@ -426,24 +426,31 @@
   const fitPort = (profile, port, cfg, start, back) => {
     const pool = port.stops.slice(), hits = s => s[5].filter(k => profile.interests.includes(k)).length;
     const home = [port.lat, port.lon], limit = back - cfg.tail, cap = Math.max(2, profile.rules.stopsPerDay || 3) + 1;
-    let t = start + cfg.lead, cur = home; const stops = [];
+    // Places that match a picked interest come first. When they run out, the nearest
+    // other places fill the day and say so (`extra`), so the plan never looks like a
+    // match it is not.
+    const picked = profile.interests.length > 0;
+    let t = start + cfg.lead, cur = home; const stops = [], extra = [];
     while (pool.length && stops.length < cap) {
       let best = null;
       pool.forEach(s => {
         const leg = RT.portLegMin(cur, [s[2], s[3]]), ret = RT.portLegMin([s[2], s[3]], home);
         if (t + leg + s[4] + cfg.per + ret > limit) return;
-        const score = hits(s) * 100 - leg;
+        const h = hits(s), score = h ? 100000 + h * 1000 - leg : -leg; // any match before any filler
         if (!best || score > best.score) best = { s, leg, score };
       });
       if (!best) break;
       pool.splice(pool.indexOf(best.s), 1);
       t += best.leg; const arr = t; t += best.s[4];
-      stops.push(mkStop(best.s[0], best.s[1], best.s[2], best.s[3], { type: typeOf(best.s), arrive: fromMin(arr), depart: fromMin(t), minutes: best.s[4], state: "" }));
+      const fill = picked && !hits(best.s);
+      stops.push(mkStop(best.s[0], best.s[1], best.s[2], best.s[3], { type: typeOf(best.s), arrive: fromMin(arr), depart: fromMin(t), minutes: best.s[4], state: "", notes: fill ? RT.PORT_FILL_NOTE : "" }));
+      extra.push(fill);
       t += cfg.per; cur = [best.s[2], best.s[3]];
     }
     const end = stops.length ? t + RT.portLegMin(cur, home) + cfg.tail : start;
-    return { stops, endMin: Math.round(end) };
+    return { stops, extra, endMin: Math.round(end) };
   };
+  RT.PORT_FILL_NOTE = "Not one of your picked interests: added to fill the day.";
   RT.portDay = (profile, port, o) => {
     const arrive = toMin(o.arrive), depart = toMin(o.depart), buffer = Number.isFinite(+o.buffer) ? +o.buffer : 30;
     const extra = RT.TENDER_MIN[port.tender] ?? 15, start = arrive + RT.DISEMBARK_MIN + extra, back = depart - buffer - extra;
@@ -452,11 +459,12 @@
     if (res.windowMin < 60) { res.warnings.push(`Only ${Math.max(0, res.windowMin)} minutes ashore after getting off the ship and allowing ${buffer} minutes to be back. Stay near the pier.`); return res; }
     if (res.windowMin < 240) res.warnings.push(`A short day: about ${Math.floor(res.windowMin / 60)} h ${res.windowMin % 60} min ashore. Pick one or two places.`);
     const tn = RT.TENDER[port.tender] || RT.TENDER.unknown;
-    if (extra) res.warnings.push(`The plan adds ${extra} minutes each way for the boat.`);
+    if (extra) res.warnings.push(port.tender === "tender" ? `The plan adds ${extra} minutes each way for the boat.`
+      : `The plan adds ${extra} minutes each way in case the ship uses tender boats.`);
     PORT_PLANS.forEach(cfg => {
       const fit = fitPort(profile, port, cfg, start, back), away = Math.max(1, (fit.endMin - start) / 60);
       const cost = cfg.key === "driver" ? [Math.round(away * 55), Math.round(away * 95)] : cfg.key === "rental" ? [65, 130] : null;
-      res.plans.push({ key: cfg.key, label: cfg.label, stops: fit.stops, endMin: fit.endMin, backAboard: fromMin(fit.endMin), spareMin: back - fit.endMin, cost, hoursAway: Math.round(away * 10) / 10 });
+      res.plans.push({ key: cfg.key, label: cfg.label, stops: fit.stops, extra: fit.extra, endMin: fit.endMin, backAboard: fromMin(fit.endMin), spareMin: back - fit.endMin, cost, hoursAway: Math.round(away * 10) / 10 });
     });
     if (port.left) res.warnings.push("Traffic drives on the left here. Check the rental company's rules for visitors.");
     return res;
@@ -486,6 +494,67 @@
         { label: "GetYourGuide", url: `https://www.getyourguide.com/s/?q=${q(`${port.name} shore excursions`)}` }
       ]
     };
+  };
+  /* Countries and territories that drive on the left, as ISO 3166 codes, from the table
+     in the Wikipedia article "Left- and right-hand traffic" (read 2026-10-20; see
+     docs/catalog-check.md). A port in one of them gets the rental-car warning. */
+  RT.LEFT_DRIVING = new Set(["ag", "ai", "au", "bb", "bd", "bm", "bn", "bs", "bt", "bw", "cc", "ck", "cx", "cy", "dm", "fj", "fk",
+    "gb", "gd", "gg", "gs", "gy", "hk", "id", "ie", "im", "in", "je", "jm", "jp", "ke", "ki", "kn", "ky", "lc", "lk", "ls", "mo",
+    "ms", "mt", "mu", "mv", "mw", "my", "mz", "na", "nf", "np", "nr", "nu", "nz", "pg", "pk", "pn", "sb", "sc", "sg", "sh", "sr",
+    "sz", "tc", "th", "tl", "to", "tt", "tv", "tz", "ug", "vc", "vg", "vi", "ws", "za", "zm", "zw"]);
+  /* Typed text that names a listed port ("Montego Bay Jamaica", "Rome", "St Thomas",
+     "Civitavecchia Italy", "Halifax, Nova Scotia") picks that port. A key is the port's
+     name, the part of the name before "(" or ",", or another name it goes by (`aka`).
+     The key must appear whole in the text, and every other word typed must belong to
+     the port's own names, address, area, or country, or be a word such as "cruise" or
+     "port", so "Falmouth, England" does not pick Falmouth, Jamaica and a country alone
+     ("Jamaica") picks no port. A full name or aka beats a shortened name; text that
+     fits two ports equally picks neither. */
+  const portKey = s => cityKey(String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, " "));
+  const PORT_FILLER = new Set(["cruise", "cruises", "port", "ports", "terminal", "pier", "harbor", "harbour", "dock", "the", "of", "in", "at", "island", "islands", "isle", "city", "usa", "us", "united", "states"]);
+  const portKeys = p => {
+    const full = [p.name, ...(p.aka || [])].map(n => [portKey(n), 1000]);
+    const base = [p.name.split(" (")[0], p.name.split(", ")[0]].map(n => [portKey(n), 500]);
+    return [...full, ...base].filter(k => k[0]);
+  };
+  RT.matchPort = (text, ports) => {
+    const q = portKey(text); if (!q) return null;
+    let best = null, bestLen = 0, tie = false;
+    ports.forEach(p => {
+      const own = new Set(portKey([p.name, p.country, p.address, p.area, ...(p.aka || [])].join(" ")).split(" "));
+      const st = window.RT_STATE_BY_NAME || {};
+      String(p.country || "").split(",").forEach(w => { const s = st[w.trim().toLowerCase()]; if (s) own.add(s.abbr.toLowerCase()); });
+      portKeys(p).forEach(([k, bonus]) => {
+        let len = 0;
+        if (k === q) len = k.length + bonus;
+        else if (k.length >= 2 && ` ${q} `.includes(` ${k} `)) {
+          const rest = ` ${q} `.replace(` ${k} `, " ").trim().split(" ").filter(Boolean);
+          if (rest.every(w => own.has(w) || PORT_FILLER.has(w))) len = k.length + bonus / 10;
+        }
+        if (!len) return;
+        if (len > bestLen) { best = p; bestLen = len; tie = false; } else if (len === bestLen && best !== p) tie = true;
+      });
+    });
+    return tie ? null : best;
+  };
+  /* A port that is not listed, from a map lookup. Places come from listed ports in the
+     same country and, in the US, from the road-trip catalog, within about an hour's
+     drive in a straight line (RT.CITY_REACH_H). The map gives territories their parent
+     country's code (US Virgin Islands "us", Hong Kong "cn"), so a listed port within
+     30 km lends its own code. Straight lines can cross water: the Cruise Day page says
+     to check each place can be reached. `place` is {label, lat, lon, cc}. */
+  const CC_PARENT = { vi: "us", pr: "us", gu: "us", mq: "fr", gp: "fr", bl: "fr", mf: "fr", pf: "fr", nc: "fr", re: "fr", cw: "nl", bq: "nl", aw: "nl", sx: "nl", hk: "cn", mo: "cn" };
+  const ccRoot = c => CC_PARENT[c] || c;
+  RT.typedPort = (place, catalog, ports) => {
+    const at = [+place.lat, +place.lon], seen = new Set(), stops = [];
+    let cc = String(place.cc || "").toLowerCase();
+    const near = ports.map(p => [haversineMi(at, [p.lat, p.lon]) * 1.609, p]).sort((a, b) => a[0] - b[0])[0];
+    if (near && near[0] <= 30 && (!cc || ccRoot(near[1].cc) === ccRoot(cc))) cc = near[1].cc;
+    const add = s => { if (seen.has(s[0]) || estDriveHours(at, [s[2], s[3]]) > RT.CITY_REACH_H) return; seen.add(s[0]); stops.push(s); };
+    ports.filter(p => !cc || ccRoot(p.cc) === ccRoot(cc)).forEach(p => p.stops.forEach(add));
+    if (!cc || ccRoot(cc) === "us") catalog.filter(d => !d.fly).forEach(d => d.stops.forEach(add));
+    const label = String(place.label);
+    return { id: "typed", name: label, region: "Your port", country: "", cc, tender: "unknown", left: RT.LEFT_DRIVING.has(cc), address: label, lat: at[0], lon: at[1], stops };
   };
 
   // ---------- exports ----------

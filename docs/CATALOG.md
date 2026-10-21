@@ -52,10 +52,11 @@ the wrong spot.
 
 ## Cruise ports
 
-`app/data/ports.js` holds 40 cruise ports with 235 places near them, in the same stop
+`app/data/ports.js` holds 192 cruise ports with 1273 places near them, in the same stop
 format as the catalog (name, address, latitude, longitude, minutes on site, interest
 tags). A port also carries whether ships there usually dock (`pier`), usually use
 tender boats (`tender`), may do either (`varies`), or are not confirmed (`unknown`),
-and whether traffic drives on the left. Places were searched on OpenStreetMap
+whether traffic drives on the left, its country code (`cc`), and other names a
+traveler may type (`aka`, so "Rome" finds Civitavecchia). Places were searched on OpenStreetMap
 Nominatim and kept only when the match fit the name; the checks and the places left
 out are in [catalog-check.md](catalog-check.md). Each port has at least four places.

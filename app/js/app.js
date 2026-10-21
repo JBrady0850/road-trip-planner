@@ -6,7 +6,7 @@
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.6.2";
+  const APP_VERSION = "0.7.0";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
   const ICONS = new Set(RT.INTERESTS.map(i => i[0]));
   const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" || k === "pin" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
@@ -157,14 +157,14 @@
   // ---------- cruise port day ----------
   // The Cruise Day tab: a port, the ship's arrival and departure, and the same
   // interests as a road trip. Places are fitted between "off the ship" and "all
-  // aboard" three ways (RT.portDay). A port that is not listed is looked up once; the
-  // answer is dropped if the typed text changed meanwhile (lesson L-029).
+  // aboard" three ways (RT.portDay). Typed text that names a listed port picks it
+  // (RT.matchPort). Any other port is looked up once and gets the listed-port and
+  // catalog places within reach (RT.typedPort); the answer is dropped if the typed text
+  // changed meanwhile (lesson L-029).
   const cruiseTypedPort = () => {
     const c = st.profile.cruise, pl = c.place;
     if (c.portId || !pl || pl.missing || pl.q !== (c.typed || "").trim() || !Number.isFinite(+pl.lat) || !Number.isFinite(+pl.lon)) return null;
-    const abbr = RT_STATE_BY_ABBR[pl.abbr] ? pl.abbr : "";
-    const d = RT.cityDestination({ label: String(pl.label), lat: +pl.lat, lon: +pl.lon, abbr }, RT_CATALOG);
-    return { id: "typed", name: String(pl.label), region: "Your port", country: "", tender: "unknown", left: false, address: String(pl.label), lat: +pl.lat, lon: +pl.lon, stops: d.stops };
+    return RT.typedPort({ label: String(pl.label), lat: +pl.lat, lon: +pl.lon, cc: String(pl.cc || "") }, RT_CATALOG, RT_PORTS);
   };
   const cruisePort = () => { const c = st.profile.cruise; return c.portId ? RT_PORTS.find(x => x.id === c.portId) || null : cruiseTypedPort(); };
   const cruiseOpts = () => { const c = st.profile.cruise; return { arrive: c.arrive, depart: c.depart, buffer: +c.buffer, line: c.line }; };
@@ -186,17 +186,20 @@
     const notes = [`<li><b>${esc(tn[0])}.</b> ${esc(tn[1])}</li>`, ...d.warnings.map(w => `<li>${esc(w)}</li>`)].join("");
     const cards = d.plans.map(pl => {
       const cost = pl.cost ? `<p class="small cost">Rough estimate: ${money(pl.cost[0])} to ${money(pl.cost[1])}${pl.key === "driver" ? " for the vehicle" : " for the day, with fuel and parking"}. Prices vary: confirm before you go.</p>` : `<p class="small cost">Price: see the cruise line's page.</p>`;
-      const stops = pl.stops.map(s => `<li><b>${U.hm12(s.arrive)}</b> ${esc(s.name)} <span class="small muted">(${s.minutes} min)</span></li>`).join("");
+      const fills = (pl.extra || []).filter(Boolean).length;
+      const stops = pl.stops.map((s, i) => `<li><b>${U.hm12(s.arrive)}</b> ${esc(s.name)} <span class="small muted">(${s.minutes} min)</span>${pl.extra && pl.extra[i] ? ` <span class="small muted fill-note">Not one of your interests</span>` : ""}</li>`).join("");
+      const fillNote = !fills ? "" : fills === pl.stops.length ? `<p class="small">No place near this port matches your interests, so the plan shows the nearest places.</p>` : `<p class="small muted">Places marked "Not one of your interests" fill the rest of the day.</p>`;
       const tourLinks = links.tours.map(t => `<li><a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.label)}: ${esc(port.name)} tours (independent sellers)</a></li>`).join("");
       const lk = pl.key === "excursion" ? `${links.lines.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a></li>`).join("")}<li><a href="${esc(links.lineSearch)}" target="_blank" rel="noopener">Search ${esc(port.name)} excursions on the web</a></li><li><a href="${esc(links.independent)}" target="_blank" rel="noopener">Independent local tours (web search)</a></li>${tourLinks}`
         : pl.key === "driver" ? `<li><a href="${esc(links.taxi)}" target="_blank" rel="noopener">Taxi and private drivers near the pier (map)</a></li><li><a href="${esc(links.independent)}" target="_blank" rel="noopener">Private tours for cruise passengers (web search)</a></li>${tourLinks}`
         : `<li><a href="${esc(links.rental)}" target="_blank" rel="noopener">Car rental near the pier (map)</a></li>`;
       return `<div class="card plan-card" data-plan="${pl.key}"><h3>${esc(pl.label)}</h3><p class="small muted">${esc(planBlurb[pl.key])}</p>
         <p class="small">Back at the pier about <b>${U.hm12(pl.backAboard)}</b> (${pl.spareMin} min to spare).</p>
-        ${pl.stops.length ? `<ol class="plan-stops">${stops}</ol>` : `<p class="small">No catalog places fit within reach of this port. Open it as an itinerary and add your own stops.</p>`}${cost}<ul class="small links">${lk}</ul>
+        ${pl.stops.length ? `<ol class="plan-stops">${stops}</ol>${fillNote}` : `<p class="small">No catalog places fit within reach of this port. Open it as an itinerary and add your own stops.</p>`}${cost}<ul class="small links">${lk}</ul>
         <button class="btn" data-act="cruiseUse" data-plan="${pl.key}">Use this plan as my itinerary</button></div>`;
     }).join("");
-    return `<div class="card"><h2 style="margin-top:0">${esc(port.name)}</h2>${head}<ul class="small cruise-notes">${notes}</ul>
+    const typedNote = port.id === "typed" ? `<p class="small">This port is not on the list. Its places come from nearby listed ports and road trips within about an hour in a straight line, and some may be across water: check that you can reach each one from your pier.</p>` : "";
+    return `<div class="card"><h2 style="margin-top:0">${esc(port.name)}</h2>${head}${typedNote}<ul class="small cruise-notes">${notes}</ul>
       <p class="small muted">Times, prices, and whether a ship docks or anchors are estimates: confirm each on your ship's daily schedule. Place hours and fees change.</p></div>
       ${d.plans.length ? `<div class="plan-grid">${cards}</div>` : ""}`;
   }
@@ -204,11 +207,11 @@
   // step when Where to is "Cruise port".
   function cruiseFields(c) {
     const regions = [...new Set(RT_PORTS.map(x => x.region))];
-    const ports = regions.map(r => `<optgroup label="${esc(r)}">${RT_PORTS.filter(x => x.region === r).map(x => `<option value="${esc(x.id)}" ${c.portId === x.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</optgroup>`).join("");
+    const ports = regions.map(r => `<optgroup label="${esc(r)}">${RT_PORTS.filter(x => x.region === r).sort((a, b) => a.name.localeCompare(b.name)).map(x => `<option value="${esc(x.id)}" ${c.portId === x.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</optgroup>`).join("");
     const lines = ["", ...RT.CRUISE_LINES.map(l => l[0])].map(l => `<option value="${esc(l)}" ${c.line === l ? "selected" : ""}>${l || "Not sure or other"}</option>`).join("");
     const buf = [30, 45, 60, 90].map(m => `<option value="${m}" ${+c.buffer === m ? "selected" : ""}>${m} minutes</option>`).join("");
     return `<div class="row">${field("Port", `<select data-bind="profile.cruise.portId" data-rescore="1"><option value="">Not listed: type it on the right</option>${ports}</select>`)}
-        ${field("Port not listed? Type the port or town", `<div class="row"><input type="text" data-bind="profile.cruise.typed" value="${esc(c.typed)}" placeholder="e.g. Charlottetown" autocomplete="off" enterkeyhint="go"><button class="btn" data-act="cruiseFind">Find</button></div>`)}</div>
+        ${field("Port not listed? Type the port or town", `<div class="row"><input type="text" data-bind="profile.cruise.typed" value="${esc(c.typed)}" placeholder="e.g. Saguenay" autocomplete="off" enterkeyhint="go"><button class="btn" data-act="cruiseFind">Find</button></div>`)}</div>
         <div class="row">${field("Port date", `<input type="date" data-bind="profile.cruise.date" data-rescore="1" value="${esc(cruiseDate())}">`)}
         ${field("Ship arrives", `<input type="time" data-bind="profile.cruise.arrive" data-rescore="1" value="${esc(c.arrive)}">`)}
         ${field("Ship leaves", `<input type="time" data-bind="profile.cruise.depart" data-rescore="1" value="${esc(c.depart)}">`)}
@@ -224,17 +227,22 @@
         <h2>What do you enjoy?</h2>${interestChips(p, false)}</div>
       <div id="cruiseOut" aria-live="polite">${cruiseOut()}</div>`;
   }
-  let cruiseLooking = null;
+  let cruiseLooking = null; // the text being looked up, so a second Enter or Find does not ask again
   async function cruiseFind() {
     const c = st.profile.cruise, f = $("[data-bind='profile.cruise.typed']"); if (f) c.typed = f.value;
     const q = (c.typed || "").trim();
     if (!q) { toast("Type a port or town first"); return; }
+    if (cruiseLooking === q) return;
+    if (!c.portId && c.place && c.place.q === q && !c.place.failed) return; // already looked up: Nominatim is asked once per text
+    const listed = RT.matchPort(q, RT_PORTS);
+    if (listed) { c.portId = listed.id; c.place = null; toast(`${listed.name} is on the port list`); if (["cruise", "interview", "destinations"].includes(st.tab)) render(); else persist(); return; }
     c.portId = ""; c.place = null; toast(`Looking up ${q}…`);
     let r = null, failed = false;
-    try { r = (await RT.services.geocode(q, true))[0]; } catch (e) { failed = true; }
+    cruiseLooking = q;
+    try { r = (await RT.services.geocode(q, true))[0]; } catch (e) { failed = true; } finally { cruiseLooking = null; }
     if ((c.typed || "").trim() !== q || c.portId) return; // changed while the map answered: ignore this answer
-    if (r) { const ab = r.state && RT_STATE_BY_NAME[r.state.toLowerCase()]; c.place = { q, label: [r.label.split(",")[0].trim(), ab ? ab.abbr : (r.state || r.country)].filter(Boolean).join(", "), lat: r.lat, lon: r.lon, abbr: ab ? ab.abbr : "" }; }
-    else { c.place = { q, missing: true }; toast(failed ? `Could not look up ${q} right now. Check the connection and try again.` : `Could not find ${q}. Check the spelling, or pick a port from the list.`); }
+    if (r) { const ab = r.state && RT_STATE_BY_NAME[r.state.toLowerCase()]; c.place = { q, label: [r.label.split(",")[0].trim(), ab ? ab.abbr : (r.state || r.country)].filter(Boolean).join(", "), lat: r.lat, lon: r.lon, abbr: ab ? ab.abbr : "", cc: r.cc || "" }; }
+    else { c.place = { q, missing: true, failed }; toast(failed ? `Could not look up ${q} right now. Check the connection and try again.` : `Could not find ${q}. Check the spelling, or pick a port from the list.`); }
     if (["cruise", "interview", "destinations"].includes(st.tab)) render(); else persist();
   }
 
@@ -637,6 +645,7 @@
     findDest: async () => { const f = $("[data-bind='profile.destCity']"); if (f) st.profile.destCity = f.value; if (st.profile.home.lat == null) { toast("Tell the app where you start: type your town or tap Use my location"); const q = $("#homeQ"); if (q) q.focus(); return; } st.recs = []; await resolveCity(); setTab("destinations"); },
     startOver: () => { st.recs = []; setTab("interview"); },
     findPorts: async () => {
+      if (cruiseLooking) return; // a lookup is already on its way
       const c = st.profile.cruise, f = $("[data-bind='profile.cruise.typed']"); if (f) c.typed = f.value;
       const typed = (c.typed || "").trim();
       if (!c.portId && typed && !(c.place && c.place.q === typed)) await cruiseFind();
@@ -773,6 +782,7 @@ ${fishingOn() && fishLinks(t.states || []) ? `<h2>Fishing licenses</h2><p>Buy on
     if (el.dataset.act === "loadTrip" || el.dataset.act === "restore") readFile(el);
   });
   view.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset && e.target.dataset.city) { e.preventDefault(); st.profile.destCity = e.target.value; st.recs = []; if (st.tab === "interview") actions.findDest(); else { render(); resolveCity().then(() => { if (st.tab === "destinations") render(); }); } return; }
+    if (e.key === "Enter" && !e.isComposing && e.target.matches && e.target.matches("[data-bind='profile.cruise.typed']")) { e.preventDefault(); if (e.repeat) return; if (st.tab === "interview") actions.findPorts(); else cruiseFind(); return; }
     if (e.key === "Enter" && e.target.id === "homeQ") actions.homeSearch(); if (e.key === "Enter" && /^add-/.test(e.target.id)) actions.addStop({ dataset: { d: e.target.id.slice(4) } }); if ((e.key === "Enter" || e.key === " ") && e.target.matches(".dest[data-act=build]")) { e.preventDefault(); actions.build(e.target); } });
   view.addEventListener("toggle", e => { if (e.target.dataset && e.target.dataset.details) st.details = e.target.open; }, true);
   // Trip files written for the command-line version keep days beside the trip and use snake_case rules.

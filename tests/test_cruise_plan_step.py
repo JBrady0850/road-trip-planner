@@ -9,8 +9,9 @@ import pytest
 from playwright.sync_api import sync_playwright
 
 APP = (Path(__file__).resolve().parents[1] / "app" / "index.html").as_uri()
-CHARLOTTETOWN = [{"display_name": "Charlottetown, Prince Edward Island, Canada", "lat": "46.2382", "lon": "-63.1311",
-                  "address": {"city": "Charlottetown", "state": "Prince Edward Island", "country": "Canada"}}]
+# A port that is not on the list: Nominatim answer for "Saguenay, Quebec", 2026-10-20.
+SAGUENAY = [{"display_name": "Saguenay, Saguenay–Lac-Saint-Jean, Quebec, Canada", "lat": "48.406", "lon": "-71.0692",
+             "address": {"city": "Saguenay", "state": "Quebec", "country": "Canada", "country_code": "ca"}}]
 WHERE = "#cityList-state"
 
 
@@ -22,7 +23,7 @@ def page():
 
         def nominatim(route):
             q = parse_qs(urlparse(route.request.url).query).get("q", [""])[0]
-            body = CHARLOTTETOWN if q.lower().startswith("charlottetown") else []
+            body = SAGUENAY if q.lower().startswith("saguenay") else []
             route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
         pg.route("https://nominatim.openstreetmap.org/**", nominatim)
         pg.route("https://router.project-osrm.org/**", lambda r: r.abort())
@@ -96,11 +97,11 @@ def test_next_without_a_port_stays_on_the_plan_step(page):
 
 def test_a_typed_port_is_looked_up_when_next_is_tapped(page):
     choose_cruise(page, port="")
-    page.fill("#view [data-bind='profile.cruise.typed']", "Charlottetown")
+    page.fill("#view [data-bind='profile.cruise.typed']", "Saguenay")
     page.click(".stepbar [data-act=findPorts]")
     page.wait_for_selector("#cruiseOut h2")
     assert page.evaluate("RT.state.tab") == "destinations"
-    assert "Charlottetown" in page.inner_text("#cruiseOut h2")
+    assert "Saguenay" in page.inner_text("#cruiseOut h2")
 
 
 def test_switching_back_restores_the_road_trip_and_survives_a_reload(page):

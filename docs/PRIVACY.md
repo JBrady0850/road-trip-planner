@@ -14,8 +14,8 @@
   Weather Service, and, only if you add your own key, your trip preferences to the
   Anthropic API. A town typed in **City** goes to Nominatim once, and only when the
   catalog does not already have it; catalog towns need no lookup. A port typed on the
-  Cruise Day tab goes to Nominatim once, and only when it is not one of the 40 listed
-  ports. Excursion, tour, rental, and taxi links open the cruise lines' own pages,
+  Cruise Day tab goes to Nominatim once, and only when it does not name one of the
+  192 listed ports. Excursion, tour, rental, and taxi links open the cruise lines' own pages,
   Viator, GetYourGuide, or a web or map search. A tour or search link carries only
   the port name; the app sends nothing until you tap it.
 - Fishing license links open each state's official wildlife agency page. The app
