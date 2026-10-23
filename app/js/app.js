@@ -6,7 +6,7 @@
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.7.0";
+  const APP_VERSION = "0.7.1";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
   const ICONS = new Set(RT.INTERESTS.map(i => i[0]));
   const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" || k === "pin" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";

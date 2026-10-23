@@ -4,7 +4,7 @@
    request asks the server whether the file changed ("no-cache"); a reload right
    after a release then runs the new app, not a stored copy. Live services (routing, weather, place search, AI) still need a
    connection and are never cached. Bump VERSION when the file list changes. */
-const VERSION = "rtp-v0.7.0";
+const VERSION = "rtp-v0.7.1";
 const FILES = ["./", "index.html", "css/style.css", "js/engine.js", "js/services.js", "js/app.js",
   "data/catalog.js", "data/states.js", "data/ports.js", "manifest.webmanifest", "icon.svg", "icon-180.png",
   "icon-192.png", "icon-512.png", "icon-maskable-512.png", "qr-app.png"];

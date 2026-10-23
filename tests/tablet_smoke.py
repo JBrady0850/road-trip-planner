@@ -42,6 +42,8 @@ def main():
     sizes = {i["sizes"] for i in manifest["icons"] if i["type"] == "image/png"}
     assert {"192x192", "512x512"} <= sizes, "Android needs 192 and 512 PNG icons"
     assert any(i.get("purpose") == "maskable" for i in manifest["icons"]), "Android needs a maskable icon"
+    # The id resolves against the site's origin: "./" would claim every app on the github.io site.
+    assert manifest["id"] == "/road-trip-planner/", "the install identity must be this app's own path"
     for i in manifest["icons"]:
         assert (APP_DIR / i["src"]).is_file(), f"missing icon {i['src']}"
     sw = (APP_DIR / "sw.js").read_text()
