@@ -6,7 +6,7 @@
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const DIETS = ["No restriction","Low carb or carnivore","Vegetarian","Vegan","Gluten free","Seafood friendly"];
   const HINT_TRIP = "rtp:tripHint";
-  const APP_VERSION = "0.8.0";
+  const APP_VERSION = "0.8.1";
   const REPO = "https://github.com/JBrady0850/road-trip-planner";
   const ICONS = new Set(RT.INTERESTS.map(i => i[0]));
   const icon = (k, cls = "ico") => ICONS.has(k) || k === "feedback" || k === "route" || k === "pin" ? `<svg class="${cls}" aria-hidden="true"><use href="#i-${k}"></use></svg>` : "";
@@ -510,7 +510,15 @@
   function vTrip() {
     const t = st.trip;
     if (!t) return `<h1>Trip</h1><div class="card"><p>No trip yet. Answer three questions and pick a destination, or open a saved trip file.</p><div class="row"><button class="btn" data-act="go" data-t="interview">Plan a trip</button><label class="btn ghost">Load trip file<input type="file" accept=".json,application/json" data-act="loadTrip" hidden></label></div></div>`;
-    const f = st.findings, errs = f.filter(x => x.level === "ERROR").length, warns = f.filter(x => x.level === "WARN").length;
+    const all = st.findings, f = all.filter(x => !RT.isOverridden(t, x)), over = all.filter(x => RT.isOverridden(t, x));
+    const errs = f.filter(x => x.level === "ERROR").length, warns = f.filter(x => x.level === "WARN").length;
+    // Each Fix label is a trial run, worked out once per render and skipped while the app is busy.
+    const labels = new Map(st.busy ? [] : f.map(x => [x, x.level === "INFO" ? "" : RT.quickFixLabel(t, x, st.profile, st.routes)])), fixLabel = x => labels.get(x) || "", simple = f.filter(x => fixLabel(x)).length;
+    const aiOn = AIS.aiReady(st.profile), aiName = AIS.AI[AIS.aiProvider(st.profile)].short;
+    const findRow = x => { const k = esc(RT.findingKey(x)), lab = fixLabel(x);
+      return `<div class="finding ${x.level}"><div class="grow"><span class="lvl ${x.level}">${x.level}</span>${esc(x.day)} | ${esc(x.check)}: ${esc(x.msg)}</div>${x.level === "INFO" ? "" : `<div class="row finding-act noprint">${lab ? `<button class="btn ghost" data-act="qfix" data-k="${k}" ${st.busy ? "disabled" : ""}>${esc(lab)}</button>` : ""}<button class="btn ghost" data-act="override" data-k="${k}" title="Keep it as it is. The plan check stops counting it; Undo brings it back.">Override</button></div>`}</div>`; };
+    const fixBar = st.busy || (!errs && !warns && !st.aiUndo) ? "" : `<div class="row fixbar noprint">${simple > 1 ? `<button class="btn" data-act="fixAll">Fix all simple problems (${simple})</button>` : ""}${aiOn && (errs || warns) ? `<button class="btn ${simple > 1 ? "ghost" : ""}" data-act="aiFix">Fix the problems with AI (${esc(aiName)})</button>` : ""}${t.createdBy === "ai" && errs ? `<button class="btn ghost" data-act="scheduleAI">Let the app schedule it</button>` : ""}${st.aiUndo && st.aiUndo.after === t ? `<button class="btn ghost" data-act="aiUndo">Undo the AI fix</button>` : ""}</div>
+      ${!aiOn && errs ? `<p class="small muted">With an AI key in Settings, the AI can try to fix these problems for you. <button class="btn small ghost" data-act="go" data-t="settings">Set it up in Settings</button></p>` : ""}`;
     const routed = t.days.filter(d => st.routes[d.date]).length;
     const near = t.base ? RT.nearbyDestinations(t, RT_CATALOG, st.profile).slice(0, 6) : [];
     const hasFree = t.days.some(RT.isFreeDay);
@@ -520,7 +528,7 @@
     const aiLegend = aiStops || aiDays || legacyAI ? `<div class="card ai-legend"><p style="margin:0">${aiTag(who.join("; "))} ${legacyAI ? "This trip was drafted by an AI model before the app marked AI items one by one: treat every stop as AI-written. Everything it wrote is UNVERIFIED: check names, addresses, hours, and prices before you go."
       : `marks what an AI model wrote with your key${who.length ? ` (${esc(who.join("; "))})` : ""}: ${aiStops} stop${aiStops === 1 ? "" : "s"}${aiDays ? ` and ${aiDays} day plan${aiDays === 1 ? "" : "s"}` : ""}. Everything it wrote is UNVERIFIED: check names, addresses, hours, and prices before you go.`}</p></div>` : "";
     let n = 0;
-    const status = st.busy ? `<p class="muted">${esc(st.busy)}</p>` : `<p class="small ${errs ? "lvl ERROR" : warns ? "lvl WARN" : "ok"}">${errs ? `${errs} problem${errs > 1 ? "s" : ""} to fix` : warns ? `${warns} thing${warns > 1 ? "s" : ""} to look at` : "Plan checks out"}${routed ? `; drive times checked for ${routed} of ${t.days.length} days` : "; drive times are estimates (Tools, Check drive times)"}.</p>`;
+    const status = st.busy ? `<p class="muted">${esc(st.busy)}</p>` : `<p class="small ${errs ? "lvl ERROR" : warns ? "lvl WARN" : "ok"}">${errs ? `${errs} problem${errs > 1 ? "s" : ""} to fix` : warns ? `${warns} thing${warns > 1 ? "s" : ""} to look at` : "Plan checks out"}${over.length ? ` (${over.length} overridden)` : ""}${routed ? `; drive times checked for ${routed} of ${t.days.length} days` : "; drive times are estimates (Tools, Check drive times)"}.</p>`;
     return `<h1>${esc(t.name)}${t.createdBy === "ai" ? ` ${aiTag(t.aiBy)}` : ""}</h1>
       ${aiLegend}
       ${st.tripHint ? `<div class="hint noprint"><div><b>Your trip is drafted and checked.</b> Tap <b>Edit</b> on any stop to change it, or add a stop with the search box under each day. When it looks right, go on to the next steps, or use <b>Next</b> at the bottom of the page:
@@ -537,7 +545,9 @@
           <button class="btn small ghost" data-act="print">Print</button>
           <button class="btn small warn" data-act="clearTrip">Clear trip</button></div></details></div>
         ${status}
-        ${f.length ? f.map(x => `<div class="finding ${x.level}"><span class="lvl ${x.level}">${x.level}</span>${esc(x.day)} | ${esc(x.check)}: ${esc(x.msg)}</div>`).join("") : ""}
+        ${fixBar}
+        ${f.map(findRow).join("")}
+        ${over.length ? `<details class="more"><summary>${over.length} overridden</summary>${over.map(x => `<div class="finding over"><div class="grow"><span class="lvl">OVERRIDDEN</span>${esc(x.day)} | ${esc(x.check)}: ${esc(x.msg)}</div><div class="row finding-act noprint"><button class="btn ghost" data-act="unoverride" data-k="${esc(RT.findingKey(x))}">Undo</button></div></div>`).join("")}</details>` : ""}
       </div>
       ${uqPanel("trip")}
       ${tripExperiences(t)}
@@ -701,23 +711,59 @@
     } catch (e) { box.innerHTML = `<p class="small lvl WARN">Place search is unavailable (${esc(e.message)}). You can still type an address; links will use it.</p>`; }
   }
 
-  function guessTZ(lat, lon) { // rough continental guess; NWS supplies the exact zone after a weather check
-    if (lat > 50 && lon < -130) return "America/Anchorage"; if (lat < 23 && lon < -150) return "Pacific/Honolulu";
-    if (lon < -114.5) return "America/Los_Angeles"; if (lon < -102) return "America/Denver"; if (lon < -87.5) return "America/Chicago"; return "America/New_York";
-  }
-  function stampTZ(trip) { trip.days.forEach(d => { if (!d.tz) { const s = d.stops.find(x => x.lat != null && x.lat !== ""); if (s) d.tz = guessTZ(+s.lat, +s.lon); } }); }
+  // A rough zone from the day's first located stop (RT.dayTZ); a weather check supplies the exact zone.
+  function stampTZ(trip) { trip.days.forEach(d => { if (!d.tz) { const z = RT.dayTZ(d); if (z) d.tz = z; } }); }
 
-  function runCheck() { if (!st.trip) return; RT.markLegacyAI(st.trip); stampTZ(st.trip); st.findings = RT.checkTrip(st.trip, st.profile, st.routes); }
+  // A trip the checker cannot read (a damaged file) shows one error instead of a blank page.
+  function runCheck() { if (!st.trip) return;
+    try { RT.markLegacyAI(st.trip); stampTZ(st.trip); st.findings = RT.checkTrip(st.trip, st.profile, st.routes); }
+    catch (e) { st.findings = [{ level: "ERROR", day: "", date: "", check: "file", msg: `the plan check could not read this trip (${e.message}). Open a saved trip file, or Clear trip under Tools.`, subject: "" }]; } }
   function setHome(h) { st.profile.home = h; st.recs = []; toast(`Starting from ${h.label}`); render(); }
   // After a draft: routed drive times, then re-timed stops, in one pass. Fails soft offline.
-  async function routeAndRetime() {
-    const t = st.trip; if (!t) return;
+  // The routed drive from home to a destination's base, or null (fly-and-drive, no home, offline).
+  async function homeRoute(dest) {
+    const h = st.profile.home; if (!dest || dest.fly || h.lat == null) return null;
+    toast("Checking the drive from home…");
+    try { return await RT.services.routeOverview([h.lat, h.lon], [dest.base[1], dest.base[2]]); } catch (e) { return null; }
+  }
+  // Name each overnight on a long drive after the nearest town (one lookup per point).
+  // Async steps work on one trip (t). When the traveler opens or clears a trip meanwhile,
+  // the step stops, touches nothing, and clears its own busy message.
+  const moved = (t, msg) => { if (st.trip === t) return false; if (st.busy === msg) { st.busy = ""; render(); } return true; };
+  // Returns the number named, or -1 when the trip changed meanwhile.
+  async function nameOvernights(t = st.trip) {
+    if (!t) return 0;
+    const pts = new Map(); t.days.forEach(d => d.stops.forEach(s => { if (RT.isUnnamedOvernight(s) && s.lat != null && s.lat !== "") (pts.get(s.address) || pts.set(s.address, []).get(s.address)).push(s); }));
+    const msg = "Finding the overnight town…"; let n = 0;
+    for (const [, list] of pts) {
+      st.busy = msg; render();
+      let town = ""; try { town = await RT.services.townAt(list[0].lat, list[0].lon); } catch (e) { /* stays a point to name by hand */ }
+      if (moved(t, msg)) return -1;
+      if (town) { list.forEach(s => { const was = s.name; RT.nameOvernight(s, town, st.profile); RT.renameInOverrides(t, was, s.name); }); n++; }
+    }
+    st.busy = ""; runCheck(); render();
+    return n;
+  }
+  // Returns false when the trip changed meanwhile.
+  async function routeAndRetime(t = st.trip) {
+    if (!t) return false;
     let ok = 0, skip = 0;
-    for (const d of t.days) { st.busy = `Checking drive times for ${U.dayLabel(d.date)}…`; render(); try { st.routes[d.date] = await RT.services.routeDay(d); ok++; } catch (e) { skip++; } }
-    if (ok) t.days.forEach(d => RT.retimeDay(d, st.routes[d.date]));
+    for (const d of t.days) {
+      const msg = `Checking drive times for ${U.dayLabel(d.date)}…`; st.busy = msg; render();
+      let r = null; try { r = await RT.services.routeDay(d); ok++; } catch (e) { skip++; }
+      if (moved(t, msg)) return false;
+      if (r) st.routes[d.date] = r;
+    }
+    if (ok) t.days.forEach(d => { if (RT.retimeDay(d, st.routes[d.date])) RT.alignDriveDay(d, st.profile); });
     st.busy = ""; runCheck(); render();
     toast(ok ? `Drive times checked for ${ok} day(s)${skip ? `; ${skip} skipped (a stop without a location, or offline)` : ""}` : "Could not reach the routing service; times are estimates for now");
+    return true;
   }
+  // One build of each kind at a time: a second tap while the first is still working does
+  // nothing. App builds and AI requests are separate kinds, and an AI request stops
+  // waiting after three minutes, so neither can block the other.
+  const running = new Set();
+  const oneBuild = (kind, fn) => async (...a) => { if (running.has(kind)) { toast("Still working on the last request…"); return; } running.add(kind); try { return await fn(...a); } finally { running.delete(kind); } };
 
   // Route and re-time only the days that changed. Fails soft offline.
   async function routeDays(idx) {
@@ -767,19 +813,41 @@
     uqNext: () => { const u = st.uq; if (!u) return; uqNotesRead(); if (u.step < RT.UNIQUE_QUESTIONS.length - 1) { u.step++; render(); } else uqResults(); },
     uqRestart: () => { const u = st.uq; if (!u) return; st.uqN++; Object.assign(u, { step: 0, res: null, picks: new Set(), ai: { busy: false, list: [], err: "" }, n: st.uqN }); render(); },
     uqPick: el => { const u = st.uq; if (!u) return; const id = el.dataset.id; u.picks.has(id) ? u.picks.delete(id) : u.picks.add(id); render(); },
-    uqBuild: async () => {
+    uqBuild: oneBuild("build", async () => {
       const u = st.uq; if (!u) return; const picks = uqOpts(u).filter(o => u.picks.has(o.id)); if (!picks.length) return;
-      const t = RT.buildUnique(st.profile, RT_CATALOG, picks, st.startDate, +st.nights);
+      const t0 = st.trip, base = RT.uniqueBase(picks, RT_CATALOG), route = await homeRoute(base);
+      if (st.uq !== u || st.trip !== t0) return; // closed, or another trip opened meanwhile
+      const t = RT.buildUnique(st.profile, RT_CATALOG, picks, st.startDate, +st.nights, { route });
       if (!t) { toast("Could not build a trip from those picks"); return; }
       st.trip = t; st.routes = {}; st.weather = []; st.open = new Set(); st.uq = null; st.tripHint = false;
-      runCheck(); setTab("trip"); await routeAndRetime();
+      runCheck(); setTab("trip"); if (await nameOvernights(t) < 0 || !(await routeAndRetime(t))) return;
       toast(`Built around ${t.base.addr} with your picks${t.leftOut ? `; ${t.leftOut.length} could not join (listed under Unique experiences)` : ""}`);
-    },
+    }),
     uqAdd: async () => {
       const u = st.uq, t = st.trip; if (!u || !t || u.trip !== t || t.cruise) { st.uq = null; render(); return; } const picks = uqOpts(u).filter(o => u.picks.has(o.id)); if (!picks.length) return;
       const res = RT.addUnique(t, picks, RT_CATALOG); res.days.forEach(i => delete st.routes[t.days[i].date]);
       st.uq = null; runCheck(); render(); const ok = await routeDays(res.days); toast(addedNote(res.added.length, res.days.length, ok));
     },
+    qfix: el => { const t = st.trip, x = st.findings.find(f => RT.findingKey(f) === el.dataset.k); if (!t || !x || st.busy) return;
+      if (x.check === "lodging") { nameOvernights(t).then(n => { if (n >= 0) toast(n ? "Overnight town named" : "Could not name the town right now (offline?). Type it with Edit."); }); return; }
+      const changed = RT.quickFix(t, x, st.profile, st.routes);
+      if (changed && x.check === "continuity") delete st.routes[x.date];
+      runCheck(); render(); toast(changed ? "Fixed" : "That one needs a change by hand: tap Edit on the stop, or use Override"); },
+    fixAll: () => { const t = st.trip; if (!t || st.busy) return; let n = 0, named = false;
+      for (let pass = 0; pass < 3; pass++) { const list = RT.checkTrip(t, st.profile, st.routes).filter(f => !RT.isOverridden(t, f) && RT.quickFixLabel(t, f, st.profile, st.routes));
+        let moved = 0; list.forEach(f => { if (f.check === "lodging") { named = true; return; } if (RT.quickFix(t, f, st.profile, st.routes)) { moved++; if (f.check === "continuity") delete st.routes[f.date]; } });
+        n += moved; if (!moved) break; }
+      runCheck(); render(); if (named) nameOvernights(t);
+      toast(n ? `Fixed ${n} problem${n === 1 ? "" : "s"}` : named ? "Naming the overnight towns…" : "Nothing left that the app can fix by itself"); },
+    override: el => { const t = st.trip; if (!t) return; t.overrides = [...new Set([...(t.overrides || []), el.dataset.k])]; render(); toast("Overridden. Undo it under the overridden list."); },
+    unoverride: el => { const t = st.trip; if (!t) return; t.overrides = (t.overrides || []).filter(k => k !== el.dataset.k); if (!t.overrides.length) delete t.overrides; render(); },
+    aiFix: oneBuild("ai", () => aiFix(false)),
+    aiUndo: () => { const u = st.aiUndo; if (!u || u.after !== st.trip) return; st.trip = u.trip; st.routes = u.routes; st.aiUndo = null; st.uq = null; runCheck(); render(); toast("Back to your plan before the AI fix"); },
+    scheduleAI: oneBuild("build", async () => { const t0 = st.trip; if (!t0) return; const own = RT_CATALOG.find(d => d.id === t0.destId);
+      const route = await homeRoute(own); if (st.trip !== t0) return; // another trip opened meanwhile
+      const t = RT.scheduleTrip(st.profile, RT_CATALOG, t0, { route }); if (!t) { toast("No places with locations to schedule"); return; }
+      st.aiUndo = { trip: t0, routes: st.routes, after: t }; st.trip = t; st.routes = {}; st.uq = null; runCheck(); render();
+      if (await nameOvernights(t) < 0 || !(await routeAndRetime(t))) return; toast(`Scheduled by the app around ${t.base.addr}${t.leftOut ? `; ${t.leftOut.length} AI place${t.leftOut.length === 1 ? "" : "s"} did not fit (listed under Unique experiences)` : ""}`); }),
     leftOk: () => { if (st.trip) { delete st.trip.leftOut; render(); } },
     recPick: el => { const r = recState(), n = el.dataset.n; if (r.picked.has(n)) r.picked.delete(n); else r.picked.set(n, RT.bestDayFor(st.trip)); render(); },
     recMore: () => { const { pool } = recView(), r = st.rec; r.shown.forEach(n => { if (!r.picked.has(n)) r.seen.add(n); });
@@ -821,14 +889,16 @@
       st.trip = t; st.routes = {}; st.weather = []; st.open = new Set(); st.tripHint = false; st.uq = null;
       runCheck(); setTab("trip");
     },
-    build: async el => {
+    build: oneBuild("build", async el => {
       const r = st.recs[+el.dataset.i]; if (!r) return;
-      st.trip = RT.draftTrip(st.profile, r.dest, st.startDate, +st.nights, RT_CATALOG); st.routes = {}; st.weather = []; st.open = new Set(); st.uq = null;
+      const t0 = st.trip, route = await homeRoute(r.dest);
+      if (st.trip !== t0) return; // a trip file was opened meanwhile
+      const t = st.trip = RT.draftTrip(st.profile, r.dest, st.startDate, +st.nights, RT_CATALOG, { route }); st.routes = {}; st.weather = []; st.open = new Set(); st.uq = null;
       let hide = false; try { hide = localStorage.getItem(HINT_TRIP) === "hide"; } catch (e) { }
       st.tripHint = !hide;
       runCheck(); setTab("trip");
-      await routeAndRetime();
-    },
+      if (await nameOvernights(t) >= 0) await routeAndRetime(t);
+    }),
     addDest: el => { const near = RT.nearbyDestinations(st.trip, RT_CATALOG, st.profile).find(n => n.dest.id === el.dataset.id); const n = RT.fillFreeDays(st.trip, st.profile, near); if (!n) { toast("No free day left to fill"); return; } st.trip.days.forEach(d => { if (d.title.startsWith("Day trip")) delete st.routes[d.date]; }); runCheck(); render(); toast(`Added ${n} day trip${n > 1 ? "s" : ""} to ${near.dest.name}`); },
     toggleStop: el => { const k = `${el.dataset.d}-${el.dataset.s}`; st.open.has(k) ? st.open.delete(k) : st.open.add(k); render(); },
     fbEase: el => { st.fb.ease = st.fb.ease === el.dataset.fbEase ? "" : el.dataset.fbEase; render(); },
@@ -836,8 +906,8 @@
     fbSave: () => download(`road-trip-planner-feedback-${new Date().toISOString().slice(0, 10)}.md`, fbText(), "text/markdown"),
     fbCopy: async () => { try { await navigator.clipboard.writeText(fbText()); toast("Feedback copied. Paste it into an email or message."); } catch (e) { toast("Copy is blocked here. Use Save as a file instead."); } },
     hideTripHint: () => { st.tripHint = false; try { localStorage.setItem(HINT_TRIP, "hide"); } catch (e) { } render(); },
-    buildAI: async el => { const r = st.recs[+el.dataset.i]; await aiBuild(r.dest); },
-    aiOpen: async () => { const notes = prompt("Describe the trip you want (places, pace, must-sees):") || ""; await aiBuild(null, notes); },
+    buildAI: oneBuild("ai", async el => { const r = st.recs[+el.dataset.i]; await aiBuild(r.dest); }),
+    aiOpen: oneBuild("ai", async () => { const notes = prompt("Describe the trip you want (places, pace, must-sees):") || ""; await aiBuild(null, notes); }),
     check: () => { runCheck(); render(); },
     routeAll: async () => { const t = st.trip; let ok = 0, skip = 0; for (const d of t.days) { st.busy = `Routing ${U.dayLabel(d.date)}…`; render(); try { st.routes[d.date] = await RT.services.routeDay(d); ok++; } catch (e) { skip++; } } st.busy = ""; runCheck(); render(); toast(`Routed ${ok} day(s)${skip ? `, skipped ${skip} (missing coordinates or offline)` : ""}`); },
     retime: () => { let n = 0; st.trip.days.forEach(d => { if (RT.retimeDay(d, st.routes[d.date])) n++; }); runCheck(); render(); toast(n ? `Re-timed ${n} day(s) from routed drive times` : "Tap Check drive times first"); },
@@ -865,11 +935,37 @@
   function confirmBox(msg) { return window.confirm(msg); }
   function move(di, si, dir) { const a = st.trip.days[di].stops, j = si + dir; if (j < 0 || j >= a.length) return; [a[si], a[j]] = [a[j], a[si]]; delete st.routes[st.trip.days[di].date]; runCheck(); render(); }
 
+  // An AI trip the plan checker cannot read never replaces the current trip.
+  function readable(t) { try { RT.checkTrip(t, st.profile, {}); } catch (e) { throw new Error("the AI answer could not be read as a trip; try again"); } }
   async function aiBuild(dest, notes) {
-    st.busy = "Asking the AI to draft an itinerary…"; setTab("trip");
-    try { const t = await RT.services.aiDraft(st.profile, dest, st.startDate, +st.nights, notes); st.trip = t; st.uq = null; st.routes = {}; runCheck(); render(); await routeAndRetime(); toast(`${AIS.AI[AIS.aiProvider(st.profile)].short} draft ready. Everything it wrote is marked AI: verify each item before you book.`); }
+    const msg = "Asking the AI to draft an itinerary…", t0 = st.trip; st.busy = msg; setTab("trip");
+    try { const t = await RT.services.aiDraft(st.profile, dest, st.startDate, +st.nights, notes);
+      if (moved(t0, msg)) return; // the traveler opened another trip meanwhile
+      readable(t);
+      st.trip = t; st.uq = null; st.routes = {}; runCheck(); render(); if (!(await routeAndRetime(t))) return;
+      const who = AIS.AI[AIS.aiProvider(st.profile)].short;
+      if (st.trip === t && st.findings.some(f => f.level === "ERROR" && !RT.isOverridden(t, f))) { await aiFix(true); return; }
+      toast(`${who} draft ready. Everything it wrote is marked AI: verify each item before you book.`); }
     catch (e) { toast(e.message); }
-    st.busy = ""; render();
+    if (st.busy === msg) st.busy = ""; render();
+  }
+
+  /* Fix with AI: the model gets the problems and the measured drive times and rewrites the
+     plan; the app routes and checks it again. Undo the AI fix restores the plan before. */
+  async function aiFix(auto) {
+    const t0 = st.trip; if (!t0) return;
+    const before = st.findings.filter(f => f.level !== "INFO" && !RT.isOverridden(t0, f)).length, who = AIS.AI[AIS.aiProvider(st.profile)].short;
+    const msg = `${auto ? "The draft has problems. " : ""}Asking ${who} to fix ${before} problem${before === 1 ? "" : "s"}…`; st.busy = msg; render();
+    try {
+      // Problems the traveler overrode are theirs to keep, so the AI never sees them.
+      const t = await RT.services.aiFix(st.profile, t0, st.findings.filter(f => !RT.isOverridden(t0, f)), st.routes);
+      if (moved(t0, msg)) return; // the traveler moved on meanwhile
+      readable(t);
+      st.aiUndo = { trip: t0, routes: st.routes, after: t }; st.trip = t; st.routes = {}; st.busy = ""; runCheck(); render();
+      if (await nameOvernights(t) < 0 || !(await routeAndRetime(t))) return;
+      const left = st.findings.filter(f => f.level === "ERROR").length;
+      toast(left ? `${who} fixed some problems; ${left} still need a change. Try again, Override them, or Let the app schedule it.` : `${who} fixed the plan. Changed places are marked AI; Undo the AI fix brings back the plan before.`);
+    } catch (e) { if (st.busy === msg) st.busy = ""; render(); toast(e.message); }
   }
 
   function linksText() { const t = st.trip; const L = [`${t.name}`, ""]; t.days.forEach((d, i) => RT.dayLinks(d).forEach((u, k, a) => L.push(`Day ${i + 1} ${U.dayLabel(d.date)}${a.length > 1 ? ` part ${k + 1}` : ""}: ${u}`))); return L.join("\n"); }
@@ -886,7 +982,7 @@
 ${aiNote}<h2>Stop-by-stop list</h2><table border="1" cellpadding="5" style="border-collapse:collapse;width:100%;font-size:14px"><tr><th>#</th><th>Day</th><th>Time</th><th>Stop</th><th>Address</th></tr>${rows}</table>
 ${(() => { const xs = tripExpItems(t); return xs.length ? `<h2>Unique experiences</h2><ul>${xs.map(e => `<li>${esc(e.text)}${e.mine ? " (your pick)" : ""}</li>`).join("")}</ul>` : ""; })()}<h2>Navigation</h2><ul>${t.days.map((d, i) => RT.dayLinks(d).map((u, k, a) => `<li><a href="${esc(u)}">Day ${i + 1} ${esc(d.title)}${a.length > 1 ? ` part ${k + 1}` : ""}</a></li>`).join("")).join("")}</ul>
 ${fishingOn() && fishLinks(t.states || []) ? `<h2>Fishing licenses</h2><p>Buy online: ${fishLinks(t.states || [])}</p>` : ""}<h2>Weather and road watch</h2><ul>${states.map(s => `<li><a href="${esc(s.roads)}">${esc(s.name)} road conditions</a></li>`).join("")}<li><a href="https://www.nps.gov/planyourvisit/alerts.htm">NPS alerts</a></li>${t.days.map(d => { const s = d.stops[d.stops.length - 1]; return s.lat != null && s.lat !== "" ? `<li><a href="${esc(RT.services.forecastPage(s.lat, s.lon))}">Forecast: ${esc(s.name)} (${U.dayLabel(d.date)})</a></li>` : ""; }).join("")}</ul>
-<h2>Plan check</h2><ul>${(st.findings.length ? st.findings : [{ level: "INFO", day: "", check: "", msg: "No findings at export time" }]).map(f => `<li><b>${f.level}</b> ${esc(f.day)} ${esc(f.check)} ${esc(f.msg)}</li>`).join("")}</ul>
+<h2>Plan check</h2><ul>${(st.findings.length ? st.findings : [{ level: "INFO", day: "", check: "", msg: "No findings at export time" }]).map(f => `<li><b>${RT.isOverridden(t, f) ? "OVERRIDDEN" : f.level}</b> ${esc(f.day)} ${esc(f.check)} ${esc(f.msg)}</li>`).join("")}</ul>
 <p style="font-size:12px;color:#666">Planning only; verify hours, prices, and closures before travel. Map data © OpenStreetMap contributors.</p></body>`;
   }
 

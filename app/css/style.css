@@ -226,3 +226,9 @@ main:focus { outline: none; }
 .uq-opt ul { margin: 4px 0 0; padding-left: 1.1em; }
 .uq-ai { border-top: 3px solid var(--service); padding-top: 4px; }
 @media (prefers-color-scheme: dark) { .tag.ai { color: #08140d; } .tag.near { color: #1d1a0a; } }
+/* plan check rows with Fix and Override (v0.8.1) */
+.finding { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.finding .grow { flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; }
+.finding-act { gap: 6px; }
+.finding.over { opacity: .75; }
+.fixbar { margin: 8px 0; gap: 8px; }

@@ -247,8 +247,16 @@
     const homeStop = extra => mkStop("Home", home.label, home.lat, home.lon, { type: "Home", state: home.state, ...extra });
     const base = { name: `Lodging near ${dest.base[0]}`, addr: dest.base[0], lat: dest.base[1], lon: dest.base[2] };
     const hotel = extra => mkStop(base.name, base.addr, base.lat, base.lon, { type: "Hotel", state: dest.states[0], booking_url: RT.lodgingSearchUrl(profile.lodging.brand, base.addr, base.lat, base.lon), ...extra });
-    const driveH = dest.fly ? 0 : estDriveHours([home.lat, home.lon], [base.lat, base.lon]);
+    // opt.route: the routed drive from home ({hours, line: [[lat, lon], ...]}). Without it
+    // the straight-line estimate decides the drive days, and overnights go on a straight line.
+    const routed = opt.route && opt.route.hours > 0 ? opt.route : null;
+    const driveH = dest.fly ? 0 : routed ? routed.hours : estDriveHours([home.lat, home.lon], [base.lat, base.lon]);
     const travelDays = dest.fly ? 0 : Math.max(1, Math.ceil(driveH / r.maxDriveHours));
+    const line = routed && routed.line && routed.line.length > 1 ? routed.line : [[home.lat, home.lon], [base.lat, base.lon]];
+    // An overnight on the way, at the share `f` of the drive from home: a point on the route
+    // the app later names after the nearest town.
+    const overnight = (f, extra) => { const p = RT.pointAlong(line, f), lat = +(+p[0]).toFixed(5), lon = +(+p[1]).toFixed(5);
+      return mkStop("Overnight en route", `En route near ${lat.toFixed(2)}, ${lon.toFixed(2)} (choose a town)`, lat, lon, { type: "Hotel", ...extra }); };
     // Places the traveler picked (opt.must, catalog stop arrays) go before everything else.
     const must = opt.must || [], mustNames = new Set(must.map(s => s[0]));
     const pool = nearestOrder([base.lat, base.lon], must).concat(orderForProfile(profile, [base.lat, base.lon], dest.stops.filter(s => !mustNames.has(s[0]))));
@@ -265,14 +273,14 @@
         const startT = toMin(r.startTime);
         let arrive = startT + legH * 60 + (legH > 3 ? 60 : 0); // an hour for fuel and lunch on long legs
         const last = k === travelDays - 1;
-        const s0 = k === 0 ? homeStop({ depart: r.startTime }) : mkStop("Overnight en route", "En route (choose a town)", null, null, { type: "Hotel", depart: r.startTime });
+        const s0 = k === 0 ? homeStop({ depart: r.startTime }) : overnight(k / travelDays, { depart: r.startTime });
         let mid = [];
         if (last && arrive < checkinMin - r.checkinWindow) {
           // Early arrival: see sights on the way in until the check-in window.
           const f = fill([base.lat, base.lon], arrive, checkinMin + r.checkinWindow, perDay);
           mid = f.stops; if (mid.length) arrive = f.t + estDriveHours(f.cur, [base.lat, base.lon]) * 60;
         }
-        const s1 = last ? hotel({ arrive: fromMin(arrive), checkin: true }) : mkStop("Overnight en route", "En route (choose a town)", null, null, { type: "Hotel", arrive: fromMin(arrive), checkin: true });
+        const s1 = last ? hotel({ arrive: fromMin(arrive), checkin: true }) : overnight((k + 1) / travelDays, { arrive: fromMin(arrive), checkin: true });
         const stops = [s0, ...mid, s1];
         // Still early? Leave home later so check-in lands on the target.
         if (last && arrive < checkinMin - r.checkinWindow) { shiftDay(stops, checkinMin - arrive); s0.notes = `Leaving later so you arrive at check-in time (${hm12(r.checkinTarget)}). Leave earlier if you would rather have more time at the stops.`; }
@@ -296,13 +304,16 @@
       for (let k = 0; k < travelDays; k++) {
         const first = k === 0, last = k === travelDays - 1;
         const arrive = toMin(r.startTime) + legH * 60 + 60;
-        const s0 = first ? hotel({ depart: r.startTime }) : mkStop("Overnight en route", "En route (choose a town)", null, null, { type: "Hotel", depart: r.startTime });
-        const s1 = last ? homeStop({ arrive: fromMin(arrive) }) : mkStop("Overnight en route", "En route (choose a town)", null, null, { type: "Hotel", arrive: fromMin(arrive), checkin: true });
+        const s0 = first ? hotel({ depart: r.startTime }) : overnight(1 - k / travelDays, { depart: r.startTime });
+        const s1 = last ? homeStop({ arrive: fromMin(arrive) }) : overnight(1 - (k + 1) / travelDays, { arrive: fromMin(arrive), checkin: true });
         days.push({ date, title: last ? "Drive home" : "Drive toward home", stops: [s0, s1] });
         date = addDays(date, 1);
       }
     }
     must.forEach(s => { if (s[6] && !trip.states.includes(s[6]) && trip.days.some(d => d.stops.some(x => x.name === s[0]))) trip.states.push(s[6]); });
+    trip.days.forEach(d => RT.alignDriveDay(d, profile));
+    // A long drive can make the trip longer than asked; the plan check says so.
+    if (trip.days.length - 1 > nights) trip.longer = { asked: nights, nights: trip.days.length - 1, driveDays: travelDays };
     return trip;
   };
 
@@ -515,22 +526,56 @@
   /* Build a trip from interview picks: the area with the most picks is the base (an
      AI-only pick list is based in the first pick's town), picks within a day trip go
      first in the draft, and the rest are listed in trip.leftOut with the reason. */
-  RT.buildUnique = (profile, catalog, picks, startDate, nights) => {
+  // The base for a list of interview picks: the area with the most picks, or (AI picks
+  // only) a town trip around the first pick.
+  RT.uniqueBase = (picks, catalog) => {
+    const places = picks.filter(o => o.kind === "place"), count = new Map();
+    picks.forEach(o => { if (o.destId) count.set(o.destId, (count.get(o.destId) || 0) + 1); });
+    if (count.size) { const best = Math.max(...count.values()); return catalog.find(d => d.id === [...count.keys()].find(k => count.get(k) === best)) || null; }
+    if (places.length) { const p0 = places[0]; return RT.cityDestination({ label: townOf(p0.address) || p0.name, lat: +p0.lat, lon: +p0.lon, abbr: p0.state || stopState(p0.address) }, catalog); }
+    return null;
+  };
+  RT.buildUnique = (profile, catalog, picks, startDate, nights, opt = {}) => {
     const places = picks.filter(o => o.kind === "place"), exps = picks.filter(o => o.kind === "experience");
-    const count = new Map(); picks.forEach(o => { if (o.destId) count.set(o.destId, (count.get(o.destId) || 0) + 1); });
-    let dest = null;
-    if (count.size) { const best = Math.max(...count.values()); dest = catalog.find(d => d.id === [...count.keys()].find(k => count.get(k) === best)); }
-    else if (places.length) { const p0 = places[0]; dest = RT.cityDestination({ label: townOf(p0.address) || p0.name, lat: +p0.lat, lon: +p0.lon, abbr: p0.state || stopState(p0.address) }, catalog); }
+    const dest = RT.uniqueBase(picks, catalog);
     if (!dest) return null;
     const at = [dest.base[1], dest.base[2]], reach = RT.dayReachH(profile), ownNames = new Set(dest.stops.map(s => s[0]));
     const fit = [], out = [];
     places.forEach(o => (ownNames.has(o.name) || dest.fly || estDriveHours(at, [+o.lat, +o.lon]) <= reach ? fit : out).push(o));
-    const trip = RT.draftTrip(profile, dest, startDate, nights, catalog, { must: fit.map(pickArr) });
+    const trip = RT.draftTrip(profile, dest, startDate, nights, catalog, { must: fit.map(pickArr), route: opt.route });
     if (exps.length) trip.uniqueAdds = exps.map(o => expAdd(o, catalog, dest.base[0]));
     const placed = new Set(trip.days.flatMap(d => d.stops.map(s => s.name)));
     const left = out.map(o => ({ name: o.name, why: `too far from ${dest.base[0]} for a day trip` })).concat(fit.filter(o => !placed.has(o.name)).map(o => ({ name: o.name, why: "did not fit in the days" })));
     if (left.length) trip.leftOut = left;
     return trip;
+  };
+  /* Let the app schedule it: keep an AI trip's places and let the app build the days
+     around one base. The base is the catalog trip the AI was asked about, or the drive-to
+     catalog trip nearest the middle of the AI's places. Places within a day trip of the
+     base go first in the draft (still marked AI); the rest are listed in trip.leftOut. */
+  RT.scheduleTrip = (profile, catalog, trip, opt = {}) => {
+    const seen = new Set(), places = [];
+    trip.days.forEach(d => d.stops.forEach(s => {
+      if (/^home$/i.test(s.type || "") || /^home$/i.test(s.name || "") || s.type === "Hotel" || s.checkin || !hasCoord(s) || seen.has(s.name)) return;
+      seen.add(s.name); places.push(s);
+    }));
+    const own = catalog.find(d => d.id === trip.destId);
+    let dest = own || null;
+    if (!dest && places.length) {
+      const mid = [places.map(s => +s.lat).sort((a, b) => a - b)[places.length >> 1], places.map(s => +s.lon).sort((a, b) => a - b)[places.length >> 1]];
+      dest = catalog.filter(d => !d.fly || profile.flyOk).reduce((b, d) => !b || haversineMi(mid, [d.base[1], d.base[2]]) < haversineMi(mid, [b.base[1], b.base[2]]) ? d : b, null);
+    }
+    if (!dest) return null;
+    const at = [dest.base[1], dest.base[2]], reach = RT.dayReachH(profile), fit = [], out = [];
+    places.forEach(s => (dest.fly || estDriveHours(at, [+s.lat, +s.lon]) <= reach ? fit : out).push(s));
+    const must = fit.map(s => [s.name, s.address, +s.lat, +s.lon, s.minutes || (s.arrive && s.depart ? Math.max(15, toMin(s.depart) - toMin(s.arrive)) : 60), [], s.state || stopState(s.address), s.ai ? { ai: true, aiBy: s.aiBy, notes: s.notes || "" } : { notes: s.notes || "" }]);
+    const nights = Math.max(1, trip.days.length - 1);
+    const t = RT.draftTrip(profile, dest, trip.days[0].date, nights, catalog, { must, route: opt.route });
+    const placed = new Set(t.days.flatMap(d => d.stops.map(s => s.name)));
+    const left = out.map(s => ({ name: s.name, why: `too far from ${dest.base[0]} for a day trip` })).concat(fit.filter(s => !placed.has(s.name)).map(s => ({ name: s.name, why: "did not fit in the days" })));
+    if (left.length) t.leftOut = left;
+    t.name = `${trip.name} (scheduled by the app)`; t.fromAI = trip.aiBy || ""; t.aiMarked = true;
+    return t;
   };
   // Add interview picks to the current trip. Returns {added, days} (day indexes changed).
   RT.addUnique = (trip, picks, catalog) => {
@@ -541,19 +586,65 @@
     return { added: added.concat(exps.map(o => o.name)), days: [...days] };
   };
 
+  // The point at share `f` (0 to 1) of the distance along a line of [lat, lon] points.
+  RT.pointAlong = (line, f) => {
+    if (line.length < 2) return line[0];
+    const seg = line.slice(1).map((p, i) => haversineMi(line[i], p)), tot = seg.reduce((a, b) => a + b, 0);
+    let goal = tot * Math.min(1, Math.max(0, f));
+    for (let i = 0; i < seg.length; i++) { if (goal <= seg[i]) { const t = seg[i] ? goal / seg[i] : 0; return [line[i][0] + (line[i + 1][0] - line[i][0]) * t, line[i][1] + (line[i + 1][1] - line[i][1]) * t]; } goal -= seg[i]; }
+    return line[line.length - 1];
+  };
+  /* A day that only drives (its start and its end, nothing between) is timed to its
+     end: an overnight check-in lands on the check-in target (leave later on a short
+     drive, up to 90 minutes earlier than usual on a long one), and the drive
+     home ends before sunset when the rules ask for it (never leaving before 6 a.m.).
+     Returns true when the times moved. */
+  RT.alignDriveDay = (day, profile) => {
+    const st = day.stops, r = profile.rules, a = st[0], end = st[st.length - 1];
+    if (st.length !== 2 || !/^Drive /.test(day.title || "") || !a.depart || !end.arrive) return false;
+    const dep = toMin(a.depart), arr = toMin(end.arrive), start = toMin(r.startTime);
+    let shift = 0, why = "";
+    if (end.checkin) {
+      const gap = toMin(r.checkinTarget) - arr;
+      if (gap > r.checkinWindow) { shift = gap; why = `Leaving later so you arrive at check-in time (${hm12(r.checkinTarget)}). Leave earlier if you would rather have more time on the road.`; }
+      // A long drive day may leave up to 90 minutes before the usual start (never before
+      // 6 a.m.) so check-in lands on the target.
+      else if (gap < -r.checkinWindow) { shift = Math.max(gap, Math.max(360, start - 90) - dep); if (shift < 0) why = `Leaving at ${hm12(fromMin(dep + shift))} so you reach check-in near ${hm12(r.checkinTarget)} on a long drive day.`; else shift = 0; }
+    } else if (r.arriveBeforeSunset && hasXY(end) && day.date) {
+      const ss = RT.sunsetLocal(day.date, +end.lat, +end.lon), sun = ss ? toMin(RT.localHM(ss, RT.tzAt(day, end), +end.lon)) : null;
+      if (sun != null && arr > sun - 15) { shift = Math.max(sun - 15 - arr, 360 - dep); if (shift < 0) why = `Leaving at ${hm12(fromMin(dep + shift))} so you get home before sunset (about ${hm12(fromMin(sun))}).`; else shift = 0; }
+    }
+    if (!shift) return false;
+    shift = (shift < 0 ? Math.floor((dep + shift) / 5) : Math.ceil((dep + shift) / 5)) * 5 - dep; // leave on a 5-minute mark
+    shiftDay(st, shift); a.notes = why.replace(/Leaving at [0-9:]+ [ap]\.m\./, `Leaving at ${hm12(a.depart)}`);
+    return true;
+  };
+  // Name an overnight after the town found at its point.
+  RT.nameOvernight = (s, town, profile) => { s.name = `Overnight in ${town}`; s.address = town; s.booking_url = RT.lodgingSearchUrl(profile.lodging.brand, town, s.lat, s.lon); };
+  RT.isUnnamedOvernight = s => /^En route/.test(s.address || "");
+
   /* Rebuild one day's times from routed legs: keep the first departure and each
      stop's time on site (its minutes, or its current arrive-to-depart span). */
+  RT.stopSig = day => day.stops.map(s => `${s.name}|${s.lat}|${s.lon}`).join(";");
   RT.retimeDay = (day, route) => {
     if (!route || route.legs.length !== day.stops.length - 1) return false;
     const st = day.stops; let t = toMin(st[0].depart || "08:30");
+    // Work out every time first; a day that would run past midnight keeps its times, and
+    // the plan check reports the drive and travel problems instead of times that wrap.
+    const next = [];
     for (let k = 1; k < st.length; k++) {
       const s = st[k];
       const stay = s.minutes || (s.arrive && s.depart ? Math.max(0, toMin(s.depart) - toMin(s.arrive)) : 0);
-      t += route.legs[k - 1].seconds / 60;
-      s.arrive = fromMin(Math.ceil(t / 5) * 5);
-      t = toMin(s.arrive);
-      if (k < st.length - 1) { t += stay; s.depart = fromMin(t); }
+      t = Math.ceil((t + route.legs[k - 1].seconds / 60) / 5) * 5;
+      const arrive = t;
+      if (k < st.length - 1) t += stay;
+      next.push([arrive, k < st.length - 1 ? t : null]);
     }
+    // lateRetime holds the stop list it was found for, so the error goes away once a stop is
+    // dropped, moved, or added.
+    if (next.some(([a, d]) => a >= 1440 || (d != null && d >= 1440))) { day.lateRetime = RT.stopSig(day); return false; }
+    delete day.lateRetime;
+    next.forEach(([a, d], i) => { const s = st[i + 1]; s.arrive = fromMin(a); if (d != null) s.depart = fromMin(d); });
     return true;
   };
 
@@ -591,20 +682,64 @@
   };
   // Local clock time at a location: estimate the offset from longitude (15 degrees per hour)
   // unless an IANA time zone is given.
+  /* A time zone from a location, for the United States and nearby; a weather check
+     supplies the exact zone. The zone lines are [lat, lon] points from south to north
+     along the county lines of the split states (Florida's panhandle, Alabama and Georgia,
+     Tennessee, Kentucky, Indiana, Michigan, the Dakotas, Nebraska, Kansas, Texas, Idaho,
+     Oregon); a place west of a line is in the zone to the west. Arizona keeps standard
+     time all year (the Navajo Nation, which keeps daylight time, is not split out).
+     Outside the covered area the answer is undefined and clock times use longitude. */
+  const ZONE_LINES = [
+    ["America/Chicago", [[24, -85.35], [29.8, -85.35], [30.4, -85.0], [31.0, -85.0], [32.85, -85.18], [35.0, -85.6], [35.9, -84.85], [36.6, -84.9], [37.0, -85.0], [37.35, -85.4],
+      [37.7, -86.0], [38.0, -86.3], [38.2, -86.6], [38.4, -87.2], [38.55, -87.6], [40.7, -87.6], [40.8, -87.0], [41.1, -86.9], [41.2, -86.5], [41.76, -86.5], [41.77, -87.0],
+      [44.0, -87.0], [44.01, -86.6], [45.4, -86.6], [45.55, -87.3], [46.25, -88.1], [46.3, -89.0], [46.5, -89.9], [50, -89.9]]],
+    ["America/Denver", [[24, -104.9], [32.0, -104.9], [32.01, -103.04], [37.0, -103.04], [37.01, -102.05], [37.7, -102.05], [37.71, -101.5], [40.0, -101.5], [40.01, -101.4],
+      [41.0, -101.4], [41.01, -101.0], [44.5, -101.0], [44.51, -100.6], [46.0, -100.6], [46.01, -101.3], [47.6, -101.3], [47.61, -104.05], [50, -104.05]]],
+    ["America/Los_Angeles", [[24, -114.82], [32.72, -114.72], [33.6, -114.53], [34.15, -114.36], [34.3, -114.14], [34.45, -114.38], [35.0, -114.63], [36.0, -114.74], [36.1, -114.05],
+      [42.0, -114.05], [42.01, -118.2], [44.3, -118.2], [44.31, -117.0], [45.5, -117.0], [45.51, -114.6], [47.0, -115.4], [47.9, -116.05], [50, -116.05]]]
+  ];
+  const lineLon = (pts, lat) => { if (lat <= pts[0][0]) return pts[0][1];
+    for (let i = 1; i < pts.length; i++) { const [a, b] = [pts[i - 1], pts[i]]; if (lat <= b[0]) return a[1] + (b[1] - a[1]) * (lat - a[0]) / (b[0] - a[0]); }
+    return pts[pts.length - 1][1]; };
+  RT.guessTZ = (lat, lon) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return undefined;
+    if (lat > 18 && lat < 23 && lon > -161 && lon < -154) return "Pacific/Honolulu";
+    if (lat > 54.6 && lon < -130) return "America/Anchorage";
+    if (lat > 17.5 && lat < 18.8 && lon > -67.5 && lon < -64.5) return "America/Puerto_Rico";
+    if (lat > 49.5 && lat < 60 && lon > -141 && lon < -89) return lon < -114.5 ? "America/Los_Angeles" : lon < -102 ? "America/Denver" : "America/Chicago";
+    if (lat < 24.3 || lat > 49.5 || lon < -125 || lon > -66.8) return undefined;
+    // West to east: Pacific, then Arizona, Mountain, Central, Eastern.
+    if (lon < lineLon(ZONE_LINES[2][1], lat)) return "America/Los_Angeles";
+    if (lat >= 31.3 && lat <= 37.0 && lon <= -109.045) return "America/Phoenix";
+    if (lon < lineLon(ZONE_LINES[1][1], lat)) return "America/Denver";
+    if (lon < lineLon(ZONE_LINES[0][1], lat)) return "America/Chicago";
+    return "America/New_York";
+  };
+  // The day's time zone: the one stored on the day, else the guess from its first located
+  // stop (the same guess the app stamps before a plan check).
+  RT.dayTZ = day => { if (day.tz) return day.tz; const s = (day.stops || []).find(x => x.lat != null && x.lat !== ""); return s ? RT.guessTZ(+s.lat, +s.lon) : undefined; };
+  // The zone at one stop: the day's stored zone when the whole day stays in the stop's
+  // zone, else the stop's own guessed zone (a drive home that crosses into another zone).
+  RT.tzAt = (day, s) => { const g = RT.guessTZ(+s.lat, +s.lon), one = (day.stops || []).every(x => x.lat == null || x.lat === "" || RT.guessTZ(+x.lat, +x.lon) === g);
+    return one || !g ? day.tz || g : g; };
   RT.localHM = (instant, tz, lon) => { if (tz) { try { return instant.toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" }); } catch (e) { /* fall through */ } } const off = Math.round(lon / 15); const m = instant.getUTCHours() * 60 + instant.getUTCMinutes() + off * 60 + (isDST(instant) ? 60 : 0); return fromMin(((m % 1440) + 1440) % 1440); };
   const isDST = d => { const y = d.getUTCFullYear(); const mar = new Date(Date.UTC(y, 2, 8)); const s = new Date(Date.UTC(y, 2, 8 + (7 - mar.getUTCDay()) % 7, 7)); const nov = new Date(Date.UTC(y, 10, 1)); const e = new Date(Date.UTC(y, 10, 1 + (7 - nov.getUTCDay()) % 7, 6)); return d >= s && d < e; };
 
   // ---------- plan checker ----------
   RT.checkTrip = (trip, profile, routes = {}) => {
     const r = profile.rules, out = [];
-    const add = (level, day, check, msg) => out.push({ level, day: dayLabel(day.date), check, msg });
+    // Each finding names its day (date) and the stop it is about (subject), so a fix or an
+    // override can find it again.
+    const add = (level, day, check, msg, subject = "") => out.push({ level, day: dayLabel(day.date), date: day.date, check, msg, subject });
+    const L = trip.longer; if (L && trip.days.length && trip.days.length - 1 === L.nights) add("INFO", trip.days[0], "trip length", `the drive takes ${L.driveDays} days each way, so this trip runs ${L.nights} nights instead of the ${L.asked} you asked for`);
     trip.days.forEach((day, i) => {
       const st = day.stops;
-      st.forEach(s => { if (s.arrive && s.depart && toMin(s.depart) < toMin(s.arrive)) add("ERROR", day, "order", `${s.name}: departs ${hm12(s.depart)} before arriving ${hm12(s.arrive)}`); });
-      for (let k = 1; k < st.length; k++) { const a = st[k - 1], b = st[k]; if (a.depart && b.arrive && toMin(b.arrive) < toMin(a.depart)) add("ERROR", day, "order", `${b.name} arrival ${hm12(b.arrive)} is before leaving ${a.name} at ${hm12(a.depart)}`); }
+      if (day.lateRetime && day.lateRetime === RT.stopSig(day)) add("ERROR", day, "too long", "with real drive times this day would run past midnight: drop or move stops, or split the drive");
+      st.forEach(s => { if (s.arrive && s.depart && toMin(s.depart) < toMin(s.arrive)) add("ERROR", day, "order", `${s.name}: departs ${hm12(s.depart)} before arriving ${hm12(s.arrive)}`, s.name); });
+      for (let k = 1; k < st.length; k++) { const a = st[k - 1], b = st[k]; if (a.depart && b.arrive && toMin(b.arrive) < toMin(a.depart)) add("ERROR", day, "order", `${b.name} arrival ${hm12(b.arrive)} is before leaving ${a.name} at ${hm12(a.depart)}`, b.name); }
       const route = routes[day.date];
       if (route && route.legs.length === st.length - 1) {
-        route.legs.forEach((leg, k) => { const a = st[k], b = st[k + 1]; if (a.depart && b.arrive) { const gap = toMin(b.arrive) - toMin(a.depart), need = leg.seconds / 60; if (gap + 10 < need) add("ERROR", day, "travel", `${a.name} to ${b.name} needs about ${Math.round(need)} min of driving; the plan allows ${gap} min`); } });
+        route.legs.forEach((leg, k) => { const a = st[k], b = st[k + 1]; if (a.depart && b.arrive) { const gap = toMin(b.arrive) - toMin(a.depart), need = leg.seconds / 60; if (gap + 10 < need) add("ERROR", day, "travel", `${a.name} to ${b.name} needs about ${Math.round(need)} min of driving; the plan allows ${gap} min`, b.name); } });
         const h = route.legs.reduce((x, l) => x + l.seconds, 0) / 3600, mi = route.legs.reduce((x, l) => x + l.meters, 0) / 1609.344;
         if (h > r.maxDriveHours) add("ERROR", day, "drive cap", `${h.toFixed(1)} h routed driving exceeds the ${r.maxDriveHours} h cap (${Math.round(mi)} mi)`);
         else if (h > r.maxDriveHours - 0.5) add("WARN", day, "drive cap", `${h.toFixed(1)} h is within 30 min of the cap; routing has no traffic data`);
@@ -612,15 +747,97 @@
         let est = 0; for (let k = 1; k < st.length; k++) { const a = st[k - 1], b = st[k]; if (hasXY(a) && hasXY(b)) est += estDriveHours([+a.lat, +a.lon], [+b.lat, +b.lon]); }
         if (est > r.maxDriveHours) add("WARN", day, "drive cap", `about ${est.toFixed(1)} h estimated driving; tap Check drive times for routed times`);
       }
-      st.forEach(s => { if (s.checkin && s.arrive) { const diff = toMin(s.arrive) - toMin(r.checkinTarget); if (Math.abs(diff) > r.checkinWindow) add("WARN", day, "check-in", `${s.name} check-in ${hm12(s.arrive)} is ${Math.abs(diff)} min ${diff > 0 ? "after" : "before"} the ${hm12(r.checkinTarget)} target`); } });
-      st.forEach(s => { if (s.timed_entry && s.arrive && toMin(s.arrive) > toMin(s.timed_entry) - r.ticketMargin) add("WARN", day, "tickets", `${s.name}: arrive ${hm12(s.arrive)} leaves less than ${r.ticketMargin} min before the ${hm12(s.timed_entry)} entry`); });
-      if (r.arriveBeforeSunset) { const t = st.find(s => s.checkin) || st[st.length - 1]; if (t && t.arrive && hasXY(t)) { const ss = RT.sunsetLocal(day.date, +t.lat, +t.lon); if (ss) { const loc = RT.localHM(ss, day.tz, +t.lon); if (toMin(t.arrive) > toMin(loc)) add("WARN", day, "sunset", `arrive ${t.name} ${hm12(t.arrive)} after sunset (about ${hm12(loc)})`); } } }
-      if (i > 0) { const pe = trip.days[i - 1].stops.slice(-1)[0], s0 = st[0]; if ((pe.address || "").trim().toLowerCase() !== (s0.address || "").trim().toLowerCase()) add("WARN", day, "continuity", `day starts at ${s0.name}, but the previous day ended at ${pe.name}`); }
+      st.forEach(s => { if (s.checkin && s.arrive) { const diff = toMin(s.arrive) - toMin(r.checkinTarget); if (Math.abs(diff) > r.checkinWindow) add("WARN", day, "check-in", `${s.name} check-in ${hm12(s.arrive)} is ${Math.abs(diff)} min ${diff > 0 ? "after" : "before"} the ${hm12(r.checkinTarget)} target`, s.name); } });
+      st.forEach(s => { if (s.timed_entry && s.arrive && toMin(s.arrive) > toMin(s.timed_entry) - r.ticketMargin) add("WARN", day, "tickets", `${s.name}: arrive ${hm12(s.arrive)} leaves less than ${r.ticketMargin} min before the ${hm12(s.timed_entry)} entry`, s.name); });
+      if (r.arriveBeforeSunset) { const t = st.find(s => s.checkin) || st[st.length - 1]; if (t && t.arrive && hasXY(t)) { const ss = RT.sunsetLocal(day.date, +t.lat, +t.lon); if (ss) { const loc = RT.localHM(ss, RT.tzAt(day, t), +t.lon); if (toMin(t.arrive) > toMin(loc)) add("WARN", day, "sunset", `arrive ${t.name} ${hm12(t.arrive)} after sunset (about ${hm12(loc)})`, t.name); } } }
+      if (i > 0) { const pe = trip.days[i - 1].stops.slice(-1)[0], s0 = st[0]; if (String(pe.address || "").trim().toLowerCase() !== String(s0.address || "").trim().toLowerCase()) add("WARN", day, "continuity", `day starts at ${s0.name}, but the previous day ended at ${pe.name}`, s0.name); }
       if (st.length - 2 > RT.MAX_WAYPOINTS) add("INFO", day, "links", `${st.length - 2} waypoints; the Google Maps link splits into legs (app limit ${RT.MAX_WAYPOINTS})`);
-      st.forEach(s => { if (!hasXY(s)) add("INFO", day, "links", `${s.name} has no coordinates; Waze opens an address search`); });
-      st.forEach(s => { if (/^En route/.test(s.address || "")) add("WARN", day, "lodging", `choose an overnight town for "${s.name}"`); });
+      st.forEach(s => { if (!hasXY(s)) add("INFO", day, "links", `${s.name} has no coordinates; Waze opens an address search`, s.name); });
+      st.forEach(s => { if (/^En route/.test(s.address || "")) add("WARN", day, "lodging", `choose an overnight town for "${s.name}"`, s.name); });
     });
     return out;
+  };
+
+  // ---------- one-tap fixes and overrides ----------
+  // A finding's key: day, level, check, stop, and the message with its numbers and clock
+  // times taken out, so a WARN and an ERROR of one check (or two kinds of "order" problem
+  // for one stop) never share a key, while a number that changes keeps the same key.
+  const msgShape = m => String(m || "").toLowerCase().replace(/-?\d+(?:[.:]\d+)*(?:\s*[ap]\.m\.)?/g, "#");
+  // A stop renamed (an overnight named after its town) keeps the traveler's overrides.
+  RT.renameInOverrides = (trip, from, to) => { if (!trip.overrides || from === to) return;
+    trip.overrides = trip.overrides.map(k => { const p = k.split("|"); if (p.length !== 5) return k; if (p[3] === from) p[3] = to; p[4] = p[4].split(msgShape(from)).join(msgShape(to)); return p.join("|"); }); };
+  RT.findingKey = f => `${f.date}|${f.level}|${f.check}|${f.subject || ""}|${msgShape(f.msg)}`;
+  // The traveler's overrides: findings they chose to keep as they are.
+  RT.isOverridden = (trip, f) => (trip.overrides || []).includes(RT.findingKey(f));
+  // What the app can fix by itself for a finding, as a button label, or "" when nothing
+  // simple applies. The label shows only when a trial run on a copy of the trip works.
+  // Name the town needs a lookup, so the app runs that one.
+  RT.quickFixLabel = (trip, f, profile, routes = {}) => {
+    const r = profile.rules, day = trip.days.find(d => d.date === f.date); if (!day) return "";
+    // A cruise port day is fixed by the ship's times, so the app never moves it.
+    if (trip.cruise) return "";
+    if (f.check === "lodging") { const s = day.stops.find(x => x.name === f.subject); return s && hasXY(s) ? "Name the town" : ""; }
+    const label = { "check-in": `Shift the day to check in at ${hm12(r.checkinTarget)}`, sunset: "Leave earlier", order: "Re-time this day", travel: "Re-time this day", continuity: "Start where the last day ended" }[f.check];
+    if (!label) return "";
+    // The trial copies only the day a fix changes; a fix never changes another day.
+    const copy = { ...trip, days: trip.days.map(d => d === day ? JSON.parse(JSON.stringify(d)) : d) };
+    return RT.quickFix(copy, f, profile, routes) ? label : "";
+  };
+  const RANK = { INFO: 0, WARN: 1, ERROR: 2 };
+  // A stop where a day starts rather than a place to see: home, a hotel, or a stop with no
+  // time on site and no timed entry.
+  const startPoint = s => /^(home|hotel)$/i.test(s.type || "") || !(+s.minutes > 0 || s.timed_entry || s.booking_url || s.arrive);
+  /* Apply the simple fix for a finding. Returns true only when the finding is gone and the
+     day has no new problem as serious as the one fixed; otherwise the day is put back as it
+     was. Times move as a block, never before 6 a.m. or past 11:30 p.m., and never on a day
+     with a timed entry. Cruise port days are left alone. */
+  RT.quickFix = (trip, f, profile, routes = {}) => {
+    const r = profile.rules, day = trip.days.find(d => d.date === f.date); if (!day || trip.cruise) return false;
+    const i = trip.days.indexOf(day), key = RT.findingKey(f), rank = RANK[f.level] ?? 1;
+    // Only this day and the day before it can change this day's findings.
+    const found = () => RT.checkTrip({ ...trip, days: trip.days.slice(Math.max(0, i - 1), i + 1) }, profile, routes).filter(x => x.date === day.date && x.level !== "INFO");
+    const before = new Set(found().map(RT.findingKey)), saved = JSON.stringify(day);
+    if (!before.has(key)) return false; // already gone
+    const restore = () => { const back = JSON.parse(saved); Object.keys(day).forEach(k => delete day[k]); Object.assign(day, back); };
+    const attempt = fn => {
+      if (fn()) { const after = found(); if (!after.some(x => RT.findingKey(x) === key) && after.every(x => before.has(RT.findingKey(x)) || RANK[x.level] < rank)) return true; }
+      restore(); return false;
+    };
+    const times = () => day.stops.flatMap(s => [s.arrive, s.depart]).filter(Boolean).map(toMin);
+    const room = shift => { const t = times(); return !t.length || (Math.min(...t) + shift >= 360 && Math.max(...t) + shift <= 1410); };
+    const timed = () => day.stops.some(s => s.timed_entry);
+    if (f.check === "check-in") {
+      if (timed()) return false;
+      if (attempt(() => RT.alignDriveDay(day, profile))) return true;
+      return attempt(() => {
+        const s = day.stops.find(x => x.name === f.subject && x.checkin) || day.stops.find(x => x.checkin); if (!s || !s.arrive) return false;
+        const gap = toMin(r.checkinTarget) - toMin(s.arrive); if (!gap || !room(gap)) return false;
+        shiftDay(day.stops, gap); return true;
+      });
+    }
+    if (f.check === "sunset") return !timed() && attempt(() => {
+      const st = day.stops, t = st.find(x => x.checkin) || st[st.length - 1]; if (!t || !t.arrive || !hasXY(t)) return false;
+      const ss = RT.sunsetLocal(day.date, +t.lat, +t.lon); if (!ss) return false;
+      const sun = toMin(RT.localHM(ss, RT.tzAt(day, t), +t.lon)), gap = sun - 15 - toMin(t.arrive);
+      const shift = Math.max(gap, 360 - Math.min(...times()));
+      if (shift >= 0) return false;
+      shiftDay(st, shift); st[0].notes = `Leaving at ${hm12(st[0].depart)} to arrive before sunset (about ${hm12(fromMin(sun))}).`; return true;
+    });
+    if (f.check === "order" || f.check === "travel") return attempt(() => routes[day.date] ? RT.retimeDay(day, routes[day.date]) : RT.estimateDay(day));
+    if (f.check === "continuity") return i > 0 && attempt(() => {
+      // The day starts where the last one ended. A start point is replaced; a place to see
+      // stays, right after the new start.
+      const st = day.stops, s0 = st[0], pe = trip.days[i - 1].stops.slice(-1)[0];
+      const start = { ...JSON.parse(JSON.stringify(pe)), arrive: "", depart: s0.depart || r.startTime, checkin: false, notes: "", timed_entry: "", minutes: 0 };
+      if (startPoint(s0)) { st[0] = start; return true; }
+      // Keep the place's times: leave the new start early enough to reach it.
+      const at = s0.arrive ? toMin(s0.arrive) : s0.depart ? toMin(s0.depart) - (+s0.minutes || 0) : null;
+      if (at == null || !hasXY(start) || !hasXY(s0)) { s0.arrive = ""; st.unshift(start); RT.estimateDay(day); return true; }
+      const leave = Math.floor((at - estDriveHours([+start.lat, +start.lon], [+s0.lat, +s0.lon]) * 60) / 5) * 5; if (leave < 360) return false; // never before 6 a.m.
+      start.depart = fromMin(leave); s0.arrive = fromMin(at); st.unshift(start);
+      return true;
+    });
+    return false;
   };
 
   // ---------- budget ----------

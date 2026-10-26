@@ -50,6 +50,26 @@
     return { legs: rt.legs.map(l => ({ seconds: l.duration, meters: l.distance })), geometry: rt.geometry.coordinates };
   };
 
+  /* The drive from a to b ([lat, lon]) in one request: hours, miles, and the route line as
+     [lat, lon] points, used before drafting to set the drive days and place overnights. */
+  S.routeOverview = async (a, b) => {
+    const d = await getJSON(`${S.osrmBase()}/route/v1/driving/${(+a[1]).toFixed(5)},${(+a[0]).toFixed(5)};${(+b[1]).toFixed(5)},${(+b[0]).toFixed(5)}?overview=simplified&geometries=geojson`, {}, 12000);
+    if (d.code !== "Ok" || !d.routes || !d.routes[0]) throw new Error(d.code || "routing failed");
+    const rt = d.routes[0];
+    if (!Number.isFinite(rt.duration) || rt.duration <= 0) throw new Error("no drive time in the answer");
+    return { hours: rt.duration / 3600, miles: (rt.distance || 0) / 1609.344, line: ((rt.geometry || {}).coordinates || []).map(([x, y]) => [y, x]) };
+  };
+  // The town at a point, or "" (used to name an overnight on a long drive).
+  S.townAt = async (lat, lon) => {
+    await throttle();
+    const email = settings().contactEmail ? `&email=${encodeURIComponent(settings().contactEmail)}` : "";
+    const x = await getJSON(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&lat=${(+lat).toFixed(5)}&lon=${(+lon).toFixed(5)}${email}`);
+    const a = (x && x.address) || {}, town = a.city || a.town || a.village || a.municipality || a.county || "";
+    if (!town) return "";
+    const ab = window.RT_STATE_BY_NAME && a.state && RT_STATE_BY_NAME[a.state.toLowerCase()];
+    return [town, ab ? ab.abbr : a.state].filter(Boolean).join(", ");
+  };
+
   const NWS = "https://api.weather.gov";
   S.nwsPoint = async (lat, lon) => {
     const p = await getJSON(`${NWS}/points/${(+lat).toFixed(4)},${(+lon).toFixed(4)}`, { headers: { Accept: "application/geo+json" } });
@@ -91,19 +111,28 @@
 
   const aiFail = async (r, who) => { let m = ""; try { const j = await r.json(); m = (j.error && (j.error.message || j.error)) || j.message || ""; } catch (e) { } throw new Error(`AI request failed (${who}, HTTP ${r.status})${m ? `: ${String(m).slice(0, 160)}` : ""}`); };
   // Send one system and one user message; return the reply text.
+  S.AI_WAIT_MS = 180000;
   S.aiText = async (profile, sys, user, maxTokens = 8000) => {
-    const k = S.aiProvider(profile), key = S.aiKey(profile), model = S.aiModel(profile), who = S.AI[k].short;
+    const k = S.aiProvider(profile), key = S.aiKey(profile), who = S.AI[k].short;
     if (!key) throw new Error(`add your ${who} API key in Settings first`);
+    // A request that hangs stops after three minutes, so the buttons never stay blocked.
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), S.AI_WAIT_MS);
+    try { return await aiAsk(profile, sys, user, maxTokens, ctl.signal); }
+    catch (e) { if (ctl.signal.aborted) throw new Error(`${who} did not answer within ${Math.round(S.AI_WAIT_MS / 60000)} minutes; try again`); throw e; }
+    finally { clearTimeout(timer); }
+  };
+  const aiAsk = async (profile, sys, user, maxTokens, signal) => {
+    const k = S.aiProvider(profile), key = S.aiKey(profile), model = S.aiModel(profile), who = S.AI[k].short;
     let r, data;
     if (k === "anthropic") {
-      r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
+      r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal,
         headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({ model, max_tokens: maxTokens, system: sys, messages: [{ role: "user", content: user }] }) });
       if (!r.ok) await aiFail(r, who);
       data = await r.json(); return (data.content || []).map(c => c.text || "").join("");
     }
     if (k === "gemini") {
-      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST",
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: "POST", signal,
         headers: { "content-type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text: user }] }], generationConfig: { responseMimeType: "application/json" } }) });
       if (!r.ok) await aiFail(r, who);
@@ -115,7 +144,7 @@
     const url = k === "openai" ? "https://api.openai.com/v1/responses" : "https://api.x.ai/v1/responses";
     const body = { model, input: [{ role: "system", content: sys }, { role: "user", content: user }] };
     if (k === "openai") body.max_output_tokens = maxTokens * 2; // reasoning models spend part of the budget before they answer
-    r = await fetch(url, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${key}` }, body: JSON.stringify(body) });
+    r = await fetch(url, { method: "POST", signal, headers: { "content-type": "application/json", authorization: `Bearer ${key}` }, body: JSON.stringify(body) });
     if (!r.ok) await aiFail(r, who);
     data = await r.json();
     if (typeof data.output_text === "string" && data.output_text) return data.output_text;
@@ -124,6 +153,22 @@
   const jsonIn = text => { const a = text.indexOf("{"), b = text.lastIndexOf("}"); if (a < 0 || b <= a) throw new Error("the AI answer had no trip data; try again"); return JSON.parse(text.slice(a, b + 1)); };
   const near = (s, h) => h && h.lat != null && s.lat != null && Math.abs(+s.lat - h.lat) < 0.01 && Math.abs(+s.lon - h.lon) < 0.01;
   const isHome = (s, profile) => /^home$/i.test(s.type || "") || /^home$/i.test(s.name || "") || near(s, profile.home);
+  // An AI answer is checked field by field: text stays text, a location is a number pair
+  // in range or nothing, times are HH:MM or empty, and links are web addresses only.
+  const str = (v, max = 300) => (typeof v === "string" || typeof v === "number" ? String(v) : "").trim().slice(0, max);
+  const num = (v, lo, hi) => { if (v == null || v === "" || typeof v === "boolean" || typeof v === "object") return null; const n = +v; return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
+  const hhmm = v => { const t = str(v, 5); return /^([01]?\d|2[0-3]):[0-5]\d$/.test(t) ? t.padStart(5, "0") : ""; };
+  const aiStop = s => {
+    if (!s || typeof s !== "object" || Array.isArray(s)) return null;
+    const name = str(s.name, 120); if (!name) return null;
+    const lat = num(s.lat, -90, 90), lon = num(s.lon, -180, 180), xy = lat != null && lon != null, url = str(s.booking_url, 500);
+    return { name, address: str(s.address, 200) || name, lat: xy ? lat : null, lon: xy ? lon : null, type: str(s.type, 40) || "Stop", arrive: hhmm(s.arrive), depart: hhmm(s.depart),
+      checkin: s.checkin === true || s.checkin === "true" ? true : s.checkin === false || s.checkin === "false" ? false : null, timed_entry: hhmm(s.timed_entry), minutes: Math.round(num(s.minutes, 0, 1440) || 0), notes: str(s.notes, 600), booking_url: /^https?:\/\//i.test(url) ? url : "" };
+  };
+  // A day's stops from an AI answer, at least a start and an end, or an error in plain words.
+  const aiStops = (d, i) => { const list = d && typeof d === "object" && Array.isArray(d.stops) ? d.stops.map(aiStop).filter(Boolean) : [];
+    if (list.length < 2) throw new Error(`the AI answer left day ${i + 1} without a start and an end; try again`); return list; };
+  const aiStates = v => Array.isArray(v) ? [...new Set(v.map(x => str(x, 2).toUpperCase()).filter(x => /^[A-Z]{2}$/.test(x)))] : [];
 
   /* AI itinerary. The model returns the app's trip JSON, which is then checked like any
      other plan. Every day and every stop except home is marked AI with who wrote it. */
@@ -138,12 +183,62 @@ Extra notes: ${notes || "none"}.
 JSON shape: {"name": str, "states": [two-letter codes], "days": [{"date": "YYYY-MM-DD", "title": str, "stops": [{"name": str, "address": str (full street address when one exists), "lat": number, "lon": number, "type": str, "arrive": "HH:MM" or "", "depart": "HH:MM" or "", "checkin": bool, "notes": str}]}]}.
 Each day's first stop is where the day starts (home or last night's hotel); the last stop is where it ends. Day 1 starts at home and the last day ends at home.`;
     const json = jsonIn(await S.aiText(profile, sys, want));
-    if (!Array.isArray(json.days) || !json.days.length) throw new Error("the AI answer had no days; try again");
+    if (!json || !Array.isArray(json.days) || !json.days.length) throw new Error("the AI answer had no days; try again");
     const by = S.aiBy(profile);
-    // Only web addresses are kept as booking links.
-    json.days.forEach(d => { d.ai = true; d.stops = (d.stops || []).map(s => RT.mkStop(s.name, s.address, s.lat ?? null, s.lon ?? null, { ...s, booking_url: /^https?:\/\//i.test(s.booking_url || "") ? s.booking_url : "", ai: !isHome(s, profile), aiBy: by })); });
-    json.createdBy = "ai"; json.aiBy = by; json.aiMarked = true; json.destId = dest ? dest.id : null;
-    return json;
+    // Only the fields the app uses are kept, each checked; only web addresses are kept as booking links.
+    const days = json.days.map((d, i) => ({ date: /^\d{4}-\d{2}-\d{2}$/.test(str(d && d.date, 10)) ? str(d.date, 10) : RT.util.addDays(startDate, i), title: str(d && d.title, 120) || `Day ${i + 1}`, ai: true,
+      stops: aiStops(d, i).map(s => RT.mkStop(s.name, s.address, s.lat, s.lon, { ...s, ai: !isHome(s, profile), aiBy: by })) }));
+    return { name: str(json.name, 120) || "AI road trip", states: aiStates(json.states), days, createdBy: "ai", aiBy: by, aiMarked: true, destId: dest ? dest.id : null };
+  };
+
+  /* Fix with AI: send the trip, the plan check's problems, and the measured drive times;
+     the model returns the whole corrected trip with the same dates. Stops that are new
+     or changed are marked AI; unchanged stops keep their marks. */
+  const stopKey = s => `${String(s.name || "").trim().toLowerCase()}|${s.lat == null || s.lat === "" ? "" : (+s.lat).toFixed(3)}|${s.lon == null || s.lon === "" ? "" : (+s.lon).toFixed(3)}`;
+  S.aiFix = async (profile, trip, findings, routes) => {
+    const r = profile.rules, n = trip.days.length;
+    const slim = { name: trip.name, states: trip.states || [], days: trip.days.map(d => ({ date: d.date, title: d.title, stops: d.stops.map(s => ({ name: s.name, address: s.address, lat: s.lat, lon: s.lon, type: s.type, arrive: s.arrive, depart: s.depart, checkin: !!s.checkin, timed_entry: s.timed_entry || "", minutes: s.minutes || 0, notes: s.notes })) })) };
+    const drives = trip.days.map((d, i) => { const rt = routes[d.date]; if (!rt || rt.legs.length !== d.stops.length - 1) return `Day ${i + 1} (${d.date}): not measured`;
+      const legs = rt.legs.map((l, k) => `${d.stops[k].name} to ${d.stops[k + 1].name} ${Math.round(l.seconds / 60)} min`).join("; ");
+      return `Day ${i + 1} (${d.date}): ${legs}; total ${(rt.legs.reduce((a, l) => a + l.seconds, 0) / 3600).toFixed(1)} h`; }).join("\n");
+    const probs = findings.filter(f => f.level !== "INFO").slice(0, 40).map(f => `${f.level} ${f.day} ${f.check}: ${f.msg}`).join("\n") || "none";
+    const sys = "You repair road-trip itineraries so they meet the planner's rules. Return ONLY JSON, no prose. Never invent hours, prices, or closures; put anything unverified in a stop's notes as 'UNVERIFIED'.";
+    // Where the days start and end depends on the kind of trip: home for a drive, the
+    // lodging for a fly-and-drive trip, the ship for a cruise port day.
+    const c = trip.cruise, U = RT.util;
+    const kind = c ? "cruise port day" : trip.fly ? "fly-and-drive trip" : "self-drive trip";
+    const ends = c ? `This is one day ashore from a cruise ship: it starts and ends at the ship (${trip.days[0].stops[0].name}). The ship docks at ${c.arrive}; be back aboard by ${U.fromMin(U.toMin(c.depart) - (+c.buffer || 0))}. Keep every time between those, and add no drive from home.`
+      : trip.fly ? `The traveler flies in, so there is no drive from home: keep each day's start and end where they are now${trip.base ? ` (the lodging near ${trip.base.addr})` : ""}.`
+      : `Day 1 starts at home and the last day ends at home: ${profile.home.label} (${profile.home.lat}, ${profile.home.lon}). On a drive too long for one day, stop overnight in a real town on the route.`;
+    const want = `This ${n}-day ${kind} breaks the planner's rules. Fix every problem listed and return the whole corrected trip.
+Rules: at most ${r.maxDriveHours} hours of driving per day, measured by road (the measured times below are real); leave no earlier than ${r.startTime} unless a long drive needs it, never before 06:00; hotel check-in near ${r.checkinTarget} (within ${r.checkinWindow} minutes); ${r.arriveBeforeSunset ? "reach each night's stop before sunset; " : ""}walks under ${r.walkMiles} miles; times stay in order within each day and never pass 23:59; each day starts where the previous day ended.
+Keep the same ${n} dates (${trip.days[0].date} to ${trip.days[n - 1].date}). ${ends} Keep places that fit the interests (${profile.interests.join(", ")}); replace, move, or drop only what must change, and prefer places near each other on the same day. Keep each stop's timed_entry. Every stop needs lat and lon.
+Problems found:
+${probs}
+Measured drive times by road:
+${drives}
+Current trip: ${JSON.stringify(slim)}
+JSON shape: {"name": str, "states": [two-letter codes], "days": [{"date": "YYYY-MM-DD", "title": str, "stops": [{"name": str, "address": str, "lat": number, "lon": number, "type": str, "arrive": "HH:MM" or "", "depart": "HH:MM" or "", "checkin": bool, "timed_entry": "HH:MM" or "", "minutes": number, "notes": str}]}]}.`;
+    const json = jsonIn(await S.aiText(profile, sys, want));
+    if (!json || !Array.isArray(json.days) || json.days.length !== n) throw new Error(`the AI answer changed the trip to ${Array.isArray(json.days) ? json.days.length : 0} days instead of ${n}; try again`);
+    const by = S.aiBy(profile), old = new Map(trip.days.flatMap(d => d.stops).map(s => [stopKey(s), s]));
+    const days = json.days.map((d, i) => {
+      const was = trip.days[i], stops = aiStops(d, i).map((s, k) => {
+        // The same place (name and location) keeps everything the traveler had: address,
+        // booking link, timed entry, notes, check-in, and its own marks. Only its times
+        // change. The same spot in the same day is matched first (a hotel is listed at the
+        // end of one day and the start of the next).
+        const key = stopKey(s), at = was.stops[k];
+        const prev = at && stopKey(at) === key ? at : was.stops.find(x => stopKey(x) === key) || old.get(key);
+        if (prev) return { ...JSON.parse(JSON.stringify(prev)), arrive: s.arrive, depart: s.depart, checkin: s.checkin == null ? !!prev.checkin : s.checkin, minutes: s.minutes || prev.minutes || 0 };
+        return RT.mkStop(s.name, s.address, s.lat, s.lon, { ...s, ai: !isHome(s, profile), aiBy: by }); });
+      const same = stops.length === was.stops.length && stops.every((s, k) => stopKey(s) === stopKey(was.stops[k]));
+      const day = { ...was, title: str(d.title, 120) || was.title, stops };
+      delete day.lateRetime; // the new plan is routed and checked again
+      if (!same) day.ai = true;
+      return day; });
+    const states = aiStates(json.states);
+    return { ...trip, name: str(json.name, 120) || trip.name, states: states.length ? states : trip.states, days, aiFixedBy: by };
   };
 
   /* AI ideas for Make my trip unique: up to six real places near `at` ([lat, lon]) that

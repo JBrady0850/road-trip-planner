@@ -30,3 +30,5 @@
 | AI ideas and AI itineraries can be wrong | A place can be closed, misnamed, or in the wrong spot | Every AI item is marked AI and UNVERIFIED; check each one before you go |
 | AI providers rename and retire models | A saved model name can stop working | Leave Model empty in Settings to use the default; the error names the provider and the HTTP status |
 | A state can have one or two catalog trips | The Trips page would offer few choices | The nearest drive-to trips in other states fill the list to five, marked Near and the state; Alaska and Hawaii are fly-and-drive and get none |
+| The command-line version does not read overrides | `python -m roadtrip check` lists every problem, including ones you overrode in the app | Overrides are saved in the trip file and work in every version of the app |
+| The app guesses time zones from a built-in map of US zone lines | Near a zone line, on the Navajo Nation, or outside the US, sunset times can be off by an hour | The map follows county lines in the split states; a day in one zone uses the exact zone from the National Weather Service once **Weather & Roads** has run; outside the US the app estimates from longitude |

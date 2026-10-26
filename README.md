@@ -153,7 +153,11 @@ works: upload the `app` folder as is.
    buying a fishing license online, on the trip card, the itinerary, the booking
    checklist, and the saved itinerary.
 3. **One-tap itinerary:** tap a trip and the app drafts it, checks it, and fetches
-   real drive times. Places that match your interests go into the days first. Drive
+   real drive times. Places that match your interests go into the days first. The
+   routed drive from home sets how many drive days you need, so a 6.5-hour drive stays
+   one day. On a longer drive the overnight sits on the route, named after the nearest
+   town, and drive-only days are timed to reach check-in near your target (leaving up
+   to 90 minutes earlier than usual on a long day) and to get home before sunset. Drive
    days fit your daily limit; sightseeing days are packed to your pace; the day you arrive sees sights on the way in so check-in lands on time;
    days left over become free days with nearby ideas and an **Add a day trip** button.
 4. **Recommended for your interests:** every itinerary lists 5 to 8 more catalog
@@ -181,9 +185,23 @@ works: upload the `app` folder as is.
    is rare in this app's catalog; the app has no data on crowds. Cruise port days do
    not offer the interview.
 6. **Plan checker** (runs by itself after every draft): times out of order, not enough time to drive between stops,
-   daily drive cap, check-in far from your target, timed-entry margin, arriving after
-   sunset, days that do not start where the last one ended, and stops without
-   coordinates.
+   daily drive cap, a day that real drive times would run past midnight, check-in far
+   from your target, timed-entry margin, arriving after sunset, days that do not start
+   where the last one ended, and stops without coordinates. Each problem has buttons:
+   **Fix** when the app can fix it by itself (shift the day to check in on time, leave
+   earlier to beat sunset, re-time the day from drive times, name the overnight town,
+   start the day where the last one ended), and **Override** to keep it as it is; an
+   overridden problem stays listed with **Undo**, and the saved trip remembers it.
+   **Fix** shows only when a trial run removes the problem without adding a new one,
+   and it never moves a day with a timed entry or a cruise port day.
+   **Fix all simple problems** applies every one-tap fix. With an AI key, **Fix the
+   problems with AI** sends the problems you have not overridden and the measured drive
+   times to your AI provider, which rewrites the plan; every new place is marked AI, a
+   place it keeps keeps its address, links, and timed entry, and **Undo the AI fix**
+   brings back the plan before. When the drive from home takes more than one day each
+   way, the trip can run more nights than you asked for, and the plan check says so. A new AI draft with errors gets one
+   automatic fix attempt; if errors remain, **Let the app schedule it** keeps the AI's
+   places that fit and builds the days with the app's own planner.
 7. **Drive times:** real drive times from the free OSRM router, applied to every
    arrival and departure automatically; rerun any time from **Tools** on the Itinerary page.
 8. **Navigate:** Google Maps links with every stop for each day (split automatically
