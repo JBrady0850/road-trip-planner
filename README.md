@@ -142,7 +142,10 @@ works: upload the `app` folder as is.
    card says why in plain words (Great fit, Good fit, Far for this trip), lists the
    city's places with your best matches first, and shows what you can only do there
    (Only here). Choose a state to see only that state's cities, numbered from the
-   best fit down. Pick **Lighthouses** to bring coastal trips to the top: every
+   best fit down. A state with fewer than five catalog trips also shows the nearest
+   drive-to trips in other states, marked **Near** and the state's name, so there are
+   always at least five to choose from (Alaska and Hawaii are fly-and-drive, so they
+   get none). Pick **Lighthouses** to bring coastal trips to the top: every
    ocean, Gulf, and Great Lakes state has at least one lighthouse you can visit or
    see from shore (Alaska is the exception; see [docs/LIMITS.md](docs/LIMITS.md)).
    Pick **Fishing** and the Plan page shows the license link for the state you chose
@@ -150,26 +153,50 @@ works: upload the `app` folder as is.
    buying a fishing license online, on the trip card, the itinerary, the booking
    checklist, and the saved itinerary.
 3. **One-tap itinerary:** tap a trip and the app drafts it, checks it, and fetches
-   real drive times. Drive days fit your daily limit; sightseeing days are packed to
-   your pace; the day you arrive sees sights on the way in so check-in lands on time;
+   real drive times. Places that match your interests go into the days first. Drive
+   days fit your daily limit; sightseeing days are packed to your pace; the day you arrive sees sights on the way in so check-in lands on time;
    days left over become free days with nearby ideas and an **Add a day trip** button.
-4. **Plan checker** (runs by itself after every draft): times out of order, not enough time to drive between stops,
+4. **Recommended for your interests:** every itinerary lists 5 to 8 more catalog
+   places, best matches within a day trip of where you stay first; when too few
+   match, the closest other places fill the list, each marked **Not one of your
+   interests**, and places farther than a day trip come last, marked **beyond a day
+   trip**. A fly-and-drive trip lists only places on its own island or area, so the
+   list can be shorter. Tap **Pick** on the ones you want and choose a day for each.
+   **Show other places** keeps your picks and swaps the rest for places you have not seen
+   yet. **Add my picks to the trip** puts them in their days and re-checks the drive
+   times for those days.
+5. **Make my trip unique:** a button on the Trips page and the Itinerary page asks
+   five questions: what would make the trip stand out (natural wonders, sunrise and
+   night sights, living history, the water, wildlife, local flavor), how unusual the
+   picks should be, how much effort is fine, how far you would go, and anything else
+   in your own words. It then shows options grouped by area, at least eight when
+   the catalog has that many within reach: catalog places, with the reason each one
+   fits (for example, "only 10 places in the app have caves"), and Only-here
+   experiences. With your own AI key, ideas from the AI
+   join the list, each marked **AI** and UNVERIFIED. Pick any number. On the Trips
+   page, **Build my unique trip** bases the trip in the area with the most picks and
+   puts your picks first; picks too far for a day trip are listed on the itinerary
+   instead. On the Itinerary page, **Add my picks to the trip** adds them to your
+   free days or the days with the fewest stops. "Unusual" means a kind of place that
+   is rare in this app's catalog; the app has no data on crowds. Cruise port days do
+   not offer the interview.
+6. **Plan checker** (runs by itself after every draft): times out of order, not enough time to drive between stops,
    daily drive cap, check-in far from your target, timed-entry margin, arriving after
    sunset, days that do not start where the last one ended, and stops without
    coordinates.
-5. **Drive times:** real drive times from the free OSRM router, applied to every
+7. **Drive times:** real drive times from the free OSRM router, applied to every
    arrival and departure automatically; rerun any time from **Tools** on the Itinerary page.
-6. **Navigate:** Google Maps links with every stop for each day (split automatically
+8. **Navigate:** Google Maps links with every stop for each day (split automatically
    above the Google Maps app limit of 9 waypoints), Waze links for each stop (Waze
    takes one destination per link), a calendar file, My Maps CSV pins, and KML route
    layers.
-7. **Weather and roads:** live National Weather Service forecasts and active alerts
+9. **Weather and roads:** live National Weather Service forecasts and active alerts
    for every stop, official FHWA road-condition pages for each state on the trip, and
    National Park Service alerts.
-8. **Budget and booking:** lodging, fuel, food, attractions, and contingency against
+10. **Budget and booking:** lodging, fuel, food, attractions, and contingency against
    your cap, plus a booking checklist with lodging search links (and fishing license
    links when you fish). You book; the app never reserves or pays.
-9. **Cruise port days:** pick **Cruise port** in Where to on step 1, or open the
+11. **Cruise port days:** pick **Cruise port** in Where to on step 1, or open the
    **Cruise Day** tab, to plan one day in port. Pick a port from 192 in the
    Caribbean, Mexico, Central and South America, Canada and New England, Alaska,
    Hawaii, US homeports, the Mediterranean and Atlantic islands, Northern Europe and
@@ -192,10 +219,16 @@ works: upload the `app` folder as is.
    works with Navigate and the saved itinerary. The app does not book anything, and
    it cannot see excursion prices or availability. Whether a port is a tender port
    changes by call, so confirm it on your ship's daily schedule.
-10. **50 states:** tap to mark states visited; finished trips mark their states.
-11. **Optional AI itineraries:** add your own Anthropic API key in Settings to have
-    Claude write a custom itinerary, which then goes through the same checks.
-12. **Feedback:** the **Feedback** tab asks testers what they tried, how easy it
+12. **50 states:** tap to mark states visited; finished trips mark their states.
+13. **Optional AI itineraries:** in Settings, pick Claude (Anthropic), ChatGPT
+    (OpenAI), Gemini (Google), or Grok (xAI), and paste your own API key from that
+    provider's key page (linked there). The AI can then write a custom itinerary,
+    which goes through the same checks, and add ideas to Make my trip unique.
+    Everything an AI model writes is marked **AI**, with the provider and model named,
+    on the trip, each day plan, and each stop, and "(AI)" follows those stops in the
+    saved itinerary, links page, calendar, CSV, and map files. The key stays in your
+    browser and goes only to that provider; backups leave every key out.
+14. **Feedback:** the **Feedback** tab asks testers what they tried, how easy it
     was, what worked, and what to change. **Open on GitHub** fills in the tester form
     for them; **Save as a file** works without a GitHub account.
 

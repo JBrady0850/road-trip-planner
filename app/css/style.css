@@ -208,3 +208,21 @@ main:focus { outline: none; }
 .plan-card .links { padding-left: 18px; margin: 6px 0 12px; } .plan-card .links li { margin: 4px 0; }
 .cruise-notes { margin: 8px 0; padding-left: 20px; } .cruise-notes li { margin: 4px 0; }
 .cost { font-weight: 600; }
+
+/* AI marks, nearby trips, recommendations, and the Make my trip unique interview (v0.8.0) */
+.tag.ai { background: var(--service); color: #fff; font-weight: 700; letter-spacing: .04em; }
+.tag.near { background: var(--brown); color: #fff; }
+.ai-legend { border-left: 6px solid var(--service); }
+.rec, .uq-opt { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); }
+.rec .grow, .uq-opt .grow { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.rec.picked, .uq-opt.picked { background: color-mix(in srgb, var(--accent) 8%, var(--panel)); border-radius: 8px; padding: 10px 8px; }
+.rec-act { gap: 8px; align-items: center; }
+.rec-act select { min-height: 42px; max-width: 100%; }
+.uq { border-left: 6px solid var(--caution); }
+.uq-q { margin: 4px 0; }
+.uq-nav { margin-top: 12px; gap: 8px; }
+.uq #uqNotes { width: 100%; min-height: 42px; }
+.uq-group { margin-top: 12px; } .uq-group h3 { margin: 4px 0 0; } .uq-group > p { margin: 0 0 4px; }
+.uq-opt ul { margin: 4px 0 0; padding-left: 1.1em; }
+.uq-ai { border-top: 3px solid var(--service); padding-top: 4px; }
+@media (prefers-color-scheme: dark) { .tag.ai { color: #08140d; } .tag.near { color: #1d1a0a; } }
